@@ -1,0 +1,32 @@
+schema_version = 2
+
+[plugin.marketplace]
+title = "资料员Agent"
+summary = "面向工程资料员的全栈业务平台：项目、商混、原材料、试块、委托单、见证/旁站/施工记录、天气、模板、系统权限与文件管理。"
+license = "MIT"
+tags = ["资料员", "工程资料", "Topcoat", "项目台账", "文档生成"]
+
+[plugin.runtime]
+artifact = "dist/boxun-topcoat-server"
+host_version = ">=2026.9.21"
+
+[plugin.runtime.process]
+image = "sha256:48a661b5e5f4560287dfc254e948825538d0f7a1379616495a424ed375afd31f"
+endpoints = []
+http_endpoints = ["https://tianqi.2345.com/Pc/GetHistory"]
+services = []
+worker_capabilities = []
+
+[plugin.frontend]
+path = "dist/frontend"
+
+[plugin.database]
+migrations = "backend-topcoat/migrations"
+
+[plugin.capabilities]
+database = true
+cryptography = true
+
+[[plugin.subplugins]]
+id = "boxun"
+routes = ["admin-api"]

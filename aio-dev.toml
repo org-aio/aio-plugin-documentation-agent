@@ -1,0 +1,18 @@
+version = 1
+
+[plugin]
+version = "0.1.0"
+
+[frontend]
+inputs = ["aio-plugin.toml", "frontend", "frontend/package.json", "frontend/package-lock.json"]
+command = ["sh", "-c", "npm --prefix frontend ci --ignore-scripts && npm --prefix frontend run build && mkdir -p dist/frontend && cp -R frontend/dist/. dist/frontend/"]
+output = "dist/frontend"
+
+[backend]
+inputs = ["aio-plugin.toml", "backend-topcoat/src", "backend-topcoat/Cargo.toml"]
+command = ["sh", "-c", "true"]
+output = "backend-topcoat/target/debug/boxun-topcoat-server"
+
+[run]
+command = ["backend-topcoat/target/debug/boxun-topcoat-server"]
+health = "/health"

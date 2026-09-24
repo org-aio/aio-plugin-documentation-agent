@@ -1,0 +1,263 @@
+{
+  "formatVersion": 1,
+  "packages": [
+    {
+      "feature": "file",
+      "source": "lib/system/file/ui"
+    },
+    {
+      "feature": "foundation",
+      "source": "lib/system/foundation/ui"
+    },
+    {
+      "feature": "logger",
+      "source": "lib/system/logger/ui"
+    },
+    {
+      "feature": "user",
+      "source": "lib/system/user/ui"
+    }
+  ],
+  "files": [
+    {
+      "source": "apps/iot-app/ui/src/api/infra/apiAccessLog/index.ts",
+      "target": "src/api/infra/apiAccessLog/index.ts",
+      "sha256": "001b4ec2693fa90d14e2d890e8d2b53a108ae85a61a13a696f30ca89d7614273"
+    },
+    {
+      "source": "apps/iot-app/ui/src/api/infra/apiErrorLog/index.ts",
+      "target": "src/api/infra/apiErrorLog/index.ts",
+      "sha256": "9169f40b7957f9f4873de084059c457f60b1f8e1c049f9c295d144bb76ba5583"
+    },
+    {
+      "source": "apps/iot-app/ui/src/api/infra/config/index.ts",
+      "target": "src/api/infra/config/index.ts",
+      "sha256": "d0f27db7fa15c76488c8939199ec73c2f930956ebaa08bb2a5d30119132ab5df"
+    },
+    {
+      "source": "apps/iot-app/ui/src/api/infra/file/index.ts",
+      "target": "src/api/infra/file/index.ts",
+      "sha256": "468f286ba4e59c0c8135faada12c86e4ff3ed8e7272d3d2a8d66b44486ade02a"
+    },
+    {
+      "source": "apps/iot-app/ui/src/api/infra/fileConfig/index.ts",
+      "target": "src/api/infra/fileConfig/index.ts",
+      "sha256": "3beceb716b66db543096abe155358683586f4ba573a71ce2d336c40229ffe90f"
+    },
+    {
+      "source": "apps/iot-app/ui/src/api/system/dept/index.ts",
+      "target": "src/api/system/dept/index.ts",
+      "sha256": "616b055d0a8821283b03d76a0cc2b647633b7844946ec76035d5d7d675d5b5a2"
+    },
+    {
+      "source": "apps/iot-app/ui/src/api/system/dict/dict.data.ts",
+      "target": "src/api/system/dict/dict.data.ts",
+      "sha256": "3b63dd8726b9f501e5b68f3ffb5dec75e3dd36b07d7b748906cc7d94b6dc4797"
+    },
+    {
+      "source": "apps/iot-app/ui/src/api/system/dict/dict.type.ts",
+      "target": "src/api/system/dict/dict.type.ts",
+      "sha256": "7f5d28d2b33baa55634df5d270c5ae42174c2e2f7d168b7a8bf3e757848fb508"
+    },
+    {
+      "source": "apps/iot-app/ui/src/api/system/loginLog/index.ts",
+      "target": "src/api/system/loginLog/index.ts",
+      "sha256": "97f34343961ffb70627f56823f04b24d6e3d473cc8041abeffb5129409dfb634"
+    },
+    {
+      "source": "apps/iot-app/ui/src/api/system/menu/index.ts",
+      "target": "src/api/system/menu/index.ts",
+      "sha256": "edf3e5b50e5b8ef2b8741e5d19290fb87dfb06fa9413e20775dee938f09e020b"
+    },
+    {
+      "source": "apps/iot-app/ui/src/api/system/operatelog/index.ts",
+      "target": "src/api/system/operatelog/index.ts",
+      "sha256": "d1719347774c22e102dc32d49bad5575b5bcd5c02184bed71283a323a2430834"
+    },
+    {
+      "source": "apps/iot-app/ui/src/api/system/permission/index.ts",
+      "target": "src/api/system/permission/index.ts",
+      "sha256": "84e5908b1e0d05fd98c8b26376c0ae3de89cd36b89f09baaa1506bcc59c5320a"
+    },
+    {
+      "source": "apps/iot-app/ui/src/api/system/post/index.ts",
+      "target": "src/api/system/post/index.ts",
+      "sha256": "760e4f80e44d5b834002c9a250ef0d2bc2c6c0448b93b9280ca29588f2c0c41e"
+    },
+    {
+      "source": "apps/iot-app/ui/src/api/system/role/index.ts",
+      "target": "src/api/system/role/index.ts",
+      "sha256": "e6d51e326ff57e017c0e2f61ad13401450fa075f0ea6a323b0fd0c08e351389c"
+    },
+    {
+      "source": "apps/iot-app/ui/src/api/system/user/index.ts",
+      "target": "src/api/system/user/index.ts",
+      "sha256": "538325b02ed0df300b2d2d80283f116fed67a2e3941a8f07389816fa5ebe3b11"
+    },
+    {
+      "source": "lib/system/file/ui/src/views/infra/file/FileForm.vue",
+      "target": "src/page-packages/file/src/views/infra/file/FileForm.vue",
+      "sha256": "349e5b211658055884efe9eed417c56db7a7237ca91fadbea20dd8e006e3b495"
+    },
+    {
+      "source": "lib/system/file/ui/src/views/infra/file/index.vue",
+      "target": "src/page-packages/file/src/views/infra/file/index.vue",
+      "sha256": "fd0a8882d81c1609e9e145036e95f67f4fb4649e64ca0166f677403a2f6dc7e8"
+    },
+    {
+      "source": "lib/system/file/ui/src/views/infra/fileConfig/FileConfigForm.vue",
+      "target": "src/page-packages/file/src/views/infra/fileConfig/FileConfigForm.vue",
+      "sha256": "529e5ad26fd0c13922fa047458ff3475c839d49abc0ace66282447ced8074bbc"
+    },
+    {
+      "source": "lib/system/file/ui/src/views/infra/fileConfig/index.vue",
+      "target": "src/page-packages/file/src/views/infra/fileConfig/index.vue",
+      "sha256": "b6264ecd7d821c475a2a93e52f47b92276effa148843697279c393b26fb1282c"
+    },
+    {
+      "source": "lib/system/foundation/ui/src/views/infra/config/ConfigForm.vue",
+      "target": "src/page-packages/foundation/src/views/infra/config/ConfigForm.vue",
+      "sha256": "7ff99ed8ad5734732208c69562e30f35bd98994df185b41a72b4e2fc334e2f5e"
+    },
+    {
+      "source": "lib/system/foundation/ui/src/views/infra/config/index.vue",
+      "target": "src/page-packages/foundation/src/views/infra/config/index.vue",
+      "sha256": "778b0b6821349832150d47ddd3d272726a4c669efd775c3533ce8d164fcc38c8"
+    },
+    {
+      "source": "lib/system/foundation/ui/src/views/system/dict/data/DictDataForm.vue",
+      "target": "src/page-packages/foundation/src/views/system/dict/data/DictDataForm.vue",
+      "sha256": "3347576f71dac9a8875d897b4fc4109993fafcee8b39a31427f2a227bf5a35c9"
+    },
+    {
+      "source": "lib/system/foundation/ui/src/views/system/dict/data/index.vue",
+      "target": "src/page-packages/foundation/src/views/system/dict/data/index.vue",
+      "sha256": "78e8e881bd5d37cc74ea68648ef0f6384e0f1cb0466835b7e81bfb96bd83ae79"
+    },
+    {
+      "source": "lib/system/foundation/ui/src/views/system/dict/DictTypeForm.vue",
+      "target": "src/page-packages/foundation/src/views/system/dict/DictTypeForm.vue",
+      "sha256": "0430e43a3fc75bea2b5972549b9d0de7f97e37d84816f64c831cbe1f15b606f1"
+    },
+    {
+      "source": "lib/system/foundation/ui/src/views/system/dict/index.vue",
+      "target": "src/page-packages/foundation/src/views/system/dict/index.vue",
+      "sha256": "9294bf42487d41bbd57b7d7b8033aa16f7f5ea881a3d4d4ebfa9b5fdbbb5c914"
+    },
+    {
+      "source": "lib/system/foundation/ui/src/views/system/post/index.vue",
+      "target": "src/page-packages/foundation/src/views/system/post/index.vue",
+      "sha256": "e10d270baccfae7c0b5a0b6a70461a8e237beaba4a9aec610c47eaaaf5585183"
+    },
+    {
+      "source": "lib/system/foundation/ui/src/views/system/post/PostForm.vue",
+      "target": "src/page-packages/foundation/src/views/system/post/PostForm.vue",
+      "sha256": "17c519e25f8edd27f4ae03671c74c5f4217f5f9ce2ed5219edb6e7b51b2b469c"
+    },
+    {
+      "source": "lib/system/logger/ui/src/views/infra/apiAccessLog/ApiAccessLogDetail.vue",
+      "target": "src/page-packages/logger/src/views/infra/apiAccessLog/ApiAccessLogDetail.vue",
+      "sha256": "58c4d1b5f0f0a59ed051c96cf2fd388c83788d970e2ea94f3acb7d03ad813905"
+    },
+    {
+      "source": "lib/system/logger/ui/src/views/infra/apiAccessLog/index.vue",
+      "target": "src/page-packages/logger/src/views/infra/apiAccessLog/index.vue",
+      "sha256": "b3c064d82fc87cfa71c213ef2b650d39057fccd98284ef9f3fcd4f72e63b2729"
+    },
+    {
+      "source": "lib/system/logger/ui/src/views/infra/apiErrorLog/ApiErrorLogDetail.vue",
+      "target": "src/page-packages/logger/src/views/infra/apiErrorLog/ApiErrorLogDetail.vue",
+      "sha256": "54fcfad3ef5f0e6e197d114895a479eb7562cbb8efc965b7de12b6c271a96206"
+    },
+    {
+      "source": "lib/system/logger/ui/src/views/infra/apiErrorLog/index.vue",
+      "target": "src/page-packages/logger/src/views/infra/apiErrorLog/index.vue",
+      "sha256": "4b24e5a24afa8bc5bb8025cf97316a120917e776bdf0b0c11dc2c0133ef8f3bf"
+    },
+    {
+      "source": "lib/system/logger/ui/src/views/system/loginlog/index.vue",
+      "target": "src/page-packages/logger/src/views/system/loginlog/index.vue",
+      "sha256": "befdfb968a73a39aa9f965a5d82449db2bdfb6bc0f2c0d3fbd59a444f5849ee9"
+    },
+    {
+      "source": "lib/system/logger/ui/src/views/system/loginlog/LoginLogDetail.vue",
+      "target": "src/page-packages/logger/src/views/system/loginlog/LoginLogDetail.vue",
+      "sha256": "030b830478d434dca8769974171b3960b7bb48ea8343066f99c8cb61a27920d2"
+    },
+    {
+      "source": "lib/system/logger/ui/src/views/system/operatelog/index.vue",
+      "target": "src/page-packages/logger/src/views/system/operatelog/index.vue",
+      "sha256": "8f8621e664187f902e5339506cfaf2cb7146d749e200d4ff1cb3d5f552bddef1"
+    },
+    {
+      "source": "lib/system/logger/ui/src/views/system/operatelog/OperateLogDetail.vue",
+      "target": "src/page-packages/logger/src/views/system/operatelog/OperateLogDetail.vue",
+      "sha256": "f55c4ce5cd9906b7e423d19892f94590938934a6653002d38df3ff9dca0c1703"
+    },
+    {
+      "source": "lib/system/user/ui/src/views/system/dept/DeptForm.vue",
+      "target": "src/page-packages/user/src/views/system/dept/DeptForm.vue",
+      "sha256": "b2d1461a918397e7ba15b4e9a66f42fbbef0643f724601653dc2f016bd61a2ad"
+    },
+    {
+      "source": "lib/system/user/ui/src/views/system/dept/index.vue",
+      "target": "src/page-packages/user/src/views/system/dept/index.vue",
+      "sha256": "b8c2732dcf73a9c64698569193a462e68d9687af67b5a07ba83dc9432560a2bd"
+    },
+    {
+      "source": "lib/system/user/ui/src/views/system/menu/index.vue",
+      "target": "src/page-packages/user/src/views/system/menu/index.vue",
+      "sha256": "af26b531d44e27c9afa58e00e12d71cb5ca43d45f00499a81a2bd73d4fe88be2"
+    },
+    {
+      "source": "lib/system/user/ui/src/views/system/menu/MenuForm.vue",
+      "target": "src/page-packages/user/src/views/system/menu/MenuForm.vue",
+      "sha256": "8a705cb6dfb98c77c3a3bd19354b08c2bbc4fe69325d69f67043416a914ba2a2"
+    },
+    {
+      "source": "lib/system/user/ui/src/views/system/role/index.vue",
+      "target": "src/page-packages/user/src/views/system/role/index.vue",
+      "sha256": "1948c28b0f2fb2dfc646a99c8d2bb1df583ea8eef823e2152f1c6afc8fdd418a"
+    },
+    {
+      "source": "lib/system/user/ui/src/views/system/role/RoleAssignMenuForm.vue",
+      "target": "src/page-packages/user/src/views/system/role/RoleAssignMenuForm.vue",
+      "sha256": "8e71817d1aaa5ff3fd1b4858900ade59864ef2b86a49535cbe79f1b7712aacc6"
+    },
+    {
+      "source": "lib/system/user/ui/src/views/system/role/RoleDataPermissionForm.vue",
+      "target": "src/page-packages/user/src/views/system/role/RoleDataPermissionForm.vue",
+      "sha256": "2dd869a37be1e42ddd0258d744f6bfebc759015713d75f36edf0575857bf2fbc"
+    },
+    {
+      "source": "lib/system/user/ui/src/views/system/role/RoleForm.vue",
+      "target": "src/page-packages/user/src/views/system/role/RoleForm.vue",
+      "sha256": "0d3b0085a45b434522b8479d21dd9b9a8217ca86451cfac7d3fa4365ef639cfe"
+    },
+    {
+      "source": "lib/system/user/ui/src/views/system/user/DeptTree.vue",
+      "target": "src/page-packages/user/src/views/system/user/DeptTree.vue",
+      "sha256": "98b44e1b8b74ed4ce8e86441b9bc9258f841ee99ab5d548279c6fb4bf376a59c"
+    },
+    {
+      "source": "lib/system/user/ui/src/views/system/user/index.vue",
+      "target": "src/page-packages/user/src/views/system/user/index.vue",
+      "sha256": "8deb86641c472ec8958935f7b29d901b03e092d458034977969532288125038b"
+    },
+    {
+      "source": "lib/system/user/ui/src/views/system/user/UserAssignRoleForm.vue",
+      "target": "src/page-packages/user/src/views/system/user/UserAssignRoleForm.vue",
+      "sha256": "cef649f63cda1c057378ea7f7ad9a87d92c8d51fee84ef1196fe55822677a1d0"
+    },
+    {
+      "source": "lib/system/user/ui/src/views/system/user/UserForm.vue",
+      "target": "src/page-packages/user/src/views/system/user/UserForm.vue",
+      "sha256": "16c39a6909f396df07cbb7b0c4dfb9627f4028064f505e54844c8fddad8147f9"
+    },
+    {
+      "source": "lib/system/user/ui/src/views/system/user/UserImportForm.vue",
+      "target": "src/page-packages/user/src/views/system/user/UserImportForm.vue",
+      "sha256": "2fc1a2a1b4d96514be039c703261f3c6eedf62db907653a40f9c2f1e210961ec"
+    }
+  ]
+}

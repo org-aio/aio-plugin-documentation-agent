@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "strictFunctionTypes": false
+  },
+  "include": ["src/page-packages/**/*.vue", "src/api/**/*.ts", "src/types/**/*.d.ts"],
+  "exclude": []
+}
