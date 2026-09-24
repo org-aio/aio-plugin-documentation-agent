@@ -89,7 +89,9 @@ async fn serve(router: Router) -> std::io::Result<()> {
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
                 Err(error) => return Err(error),
             }
-            let listener = UnixListener::bind(path)?;
+            use std::os::unix::fs::PermissionsExt;
+            let listener = UnixListener::bind(&path)?;
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o666))?;
             return topcoat::serve(listener, router).await;
         }
         #[cfg(not(unix))]
