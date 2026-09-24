@@ -67,9 +67,12 @@ async fn main() -> Result<()> {
         unsafe { env::set_var("PORT", port) };
     }
     let state = connect_state().await?;
-    seed::initialize(&state)
-        .await
-        .map_err(|error| topcoat::Error::from(std::io::Error::other(error)))?;
+    eprintln!("资料员Agent 数据库就绪，开始初始化");
+    seed::initialize(&state).await.map_err(|error| {
+        eprintln!("资料员Agent 初始化失败: {error}");
+        topcoat::Error::from(std::io::Error::other(error))
+    })?;
+    eprintln!("资料员Agent 初始化完成，开始监听");
     serve(router(state)).await.map_err(topcoat::Error::from)
 }
 
@@ -429,9 +432,14 @@ async fn connect_state() -> Result<AppState> {
         .or_else(|| env::var("BOXUN_DATABASE_URL").ok())
         .ok_or_else(|| topcoat::Error::from(std::io::Error::other("宿主未授权数据库")))?;
     let database_url = normalize_database_url(&database_url)?;
+    eprintln!("资料员Agent 开始连接宿主数据库");
     let (database, connection) = tokio_postgres::connect(&database_url, tokio_postgres::NoTls)
         .await
-        .map_err(|error| topcoat::Error::from(std::io::Error::other(error.to_string())))?;
+        .map_err(|error| {
+            eprintln!("资料员Agent 数据库连接失败: {error:?}");
+            topcoat::Error::from(std::io::Error::other(error.to_string()))
+        })?;
+    eprintln!("资料员Agent 数据库连接成功");
     tokio::spawn(async move {
         if let Err(error) = connection.await {
             eprintln!("Boxun Topcoat 数据库连接中断: {error}");
@@ -487,7 +495,7 @@ fn normalize_database_url(value: &str) -> Result<String> {
     if !retained.is_empty() {
         let mut query = url.query_pairs_mut();
         for (key, value) in &retained {
-            query.append_pair(&key, &value);
+            query.append_pair(key, value);
         }
     }
 
