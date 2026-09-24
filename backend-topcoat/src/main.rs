@@ -453,6 +453,13 @@ async fn connect_state() -> Result<AppState> {
 fn normalize_database_url(value: &str) -> Result<String> {
     let mut url = url::Url::parse(value)
         .map_err(|error| topcoat::Error::from(std::io::Error::other(error.to_string())))?;
+    let socket_host = url
+        .query_pairs()
+        .find(|(key, _)| key == "host")
+        .map(|(_, value)| value.into_owned());
+    let socket_only = socket_host
+        .as_deref()
+        .is_some_and(|value| value.starts_with('/'));
     let supported = [
         "sslmode",
         "application_name",
@@ -476,6 +483,25 @@ fn normalize_database_url(value: &str) -> Result<String> {
         for (key, value) in retained {
             query.append_pair(&key, &value);
         }
+    }
+    if socket_only {
+        let user = url.username();
+        let password = url.password().unwrap_or_default();
+        let credentials = if user.is_empty() {
+            String::new()
+        } else if password.is_empty() {
+            user.to_owned()
+        } else {
+            format!("{user}:{password}@")
+        };
+        let query = url.query().unwrap_or_default();
+        return Ok(format!(
+            "{}://{}{}?{}",
+            url.scheme(),
+            credentials,
+            url.path(),
+            query
+        ));
     }
     Ok(url.to_string())
 }
@@ -544,17 +570,14 @@ mod tests {
             "postgres://user:pass@localhost:5432/aio_plugin_components?sslmode=prefer&statement-cache-capacity=100&host=%2Fdatabase",
         )
         .expect("process 数据库 URL");
-        let url = url::Url::parse(&normalized).expect("规范化 URL");
-        assert_eq!(
-            url.query_pairs()
-                .find(|(key, _)| key == "host")
-                .map(|(_, value)| value.into_owned())
-                .as_deref(),
-            Some("/database")
-        );
         assert!(
-            url.query_pairs()
-                .all(|(key, _)| key != "statement-cache-capacity")
+            normalized.contains("host=%2Fdatabase")
+                && !normalized.contains("statement-cache-capacity")
+        );
+        let config: tokio_postgres::Config = normalized.parse().expect("tokio-postgres 配置");
+        assert_eq!(
+            config.get_hosts(),
+            &[tokio_postgres::config::Host::Unix("/database".into())]
         );
     }
 }
