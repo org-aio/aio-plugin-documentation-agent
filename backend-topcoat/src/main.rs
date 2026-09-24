@@ -507,7 +507,17 @@ fn normalize_database_url(value: &str) -> Result<String> {
         } else {
             format!("{user}:{password}@")
         };
-        let query = url.query().unwrap_or_default();
+        let query = retained
+            .iter()
+            .map(|(key, value)| {
+                format!(
+                    "{}={}",
+                    url::form_urlencoded::byte_serialize(key.as_bytes()).collect::<String>(),
+                    url::form_urlencoded::byte_serialize(value.as_bytes()).collect::<String>()
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("&");
         return Ok(format!(
             "{}://{}{}?{}",
             url.scheme(),
@@ -586,6 +596,7 @@ mod tests {
         assert!(
             normalized.contains("host=%2Fdatabase")
                 && !normalized.contains("statement-cache-capacity")
+                && normalized.contains("sslmode=disable")
         );
         let config: tokio_postgres::Config = normalized.parse().expect("tokio-postgres 配置");
         assert_eq!(
