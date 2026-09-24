@@ -18,6 +18,14 @@ const bytesFromBase64 = (value) => {
   return bytes
 }
 
+const encodeBody = (value) => new TextEncoder().encode(value)
+const decodeBody = (value) => {
+  if (value instanceof Uint8Array) {
+    return new TextDecoder().decode(value)
+  }
+  return typeof value === 'string' ? value : ''
+}
+
 async function serializeFormData(data) {
   if (!(data instanceof FormData)) {
     return data
@@ -98,14 +106,17 @@ export function createRequestClient({
       if (credentials.accessToken && !query.has('access_token')) {
         query.set('access_token', credentials.accessToken)
       }
-      const requestBody = options.data == null ? '' : JSON.stringify(await serializeFormData(options.data))
+      const requestBody = encodeBody(
+        options.data == null ? '' : JSON.stringify(await serializeFormData(options.data))
+      )
       const response = await bridge.request({
         method,
         path: `${apiBase.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`,
         query: query.toString() || null,
         body: requestBody
       })
-      const payload = response.body ? JSON.parse(response.body) : null
+      const responseBody = decodeBody(response.body)
+      const payload = responseBody ? JSON.parse(responseBody) : null
       if (response.status === 401 && !retried) {
         const refreshed = await refreshOnce()
         if (refreshed) {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { createAioEntryResolver } from './aio-route.mjs'
+import { createAioEntryResolver, resolveAioDocumentRoute } from './aio-route.mjs'
 
 const resolve = createAioEntryResolver([
   { id: 'menu-5', route: '/home' },
@@ -22,4 +22,15 @@ test('preserves business query parameters and ignores host preparation flags', (
     '/boxun/project-info?projectId=42'
   )
   assert.equal(resolve('/pages/unknown.html', ''), null)
+})
+
+test('resolves the route from the generated entry metadata after the host rewrites the URL', () => {
+  const documentValue = {
+    querySelector: (selector) =>
+      selector === 'meta[name="aio-page-id"]' ? { content: 'menu-22' } : null
+  }
+  assert.equal(
+    resolveAioDocumentRoute(documentValue, [{ id: 'menu-22', route: '/boxun/project-info' }]),
+    '/boxun/project-info'
+  )
 })

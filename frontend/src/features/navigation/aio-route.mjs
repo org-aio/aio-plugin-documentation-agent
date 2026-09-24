@@ -23,3 +23,8 @@ export function createAioEntryResolver(pages, prefix = '/pages/') {
     return suffix ? `${route}?${suffix}` : route
   }
 }
+
+export function resolveAioDocumentRoute(documentValue, pages) {
+  const id = documentValue.querySelector?.('meta[name="aio-page-id"]')?.content
+  return (id && pages.find((page) => page.id === id)?.route) || null
+}

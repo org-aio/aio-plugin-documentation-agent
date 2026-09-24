@@ -303,15 +303,28 @@ test('AIO 沙箱通过宿主桥发送 JSON、上传 base64 与还原下载 Blob'
       request: async (request) => {
         calls.push(request)
         if (request.path.endsWith('/infra/file/upload')) {
-          return { status: 200, body: JSON.stringify({ code: 0, data: '/infra/file/content?id=3' }) }
+          return {
+            status: 200,
+            body: new TextEncoder().encode(
+              JSON.stringify({ code: 0, data: '/infra/file/content?id=3' })
+            )
+          }
         }
         if (request.path.endsWith('/system/user/export-excel')) {
           return {
             status: 200,
-            body: JSON.stringify({ code: 0, data: { base64: 'aGVsbG8=', contentType: 'application/vnd.ms-excel' } })
+            body: new TextEncoder().encode(
+              JSON.stringify({
+                code: 0,
+                data: { base64: 'aGVsbG8=', contentType: 'application/vnd.ms-excel' }
+              })
+            )
           }
         }
-        return { status: 200, body: JSON.stringify({ code: 0, data: { ok: true } }) }
+        return {
+          status: 200,
+          body: new TextEncoder().encode(JSON.stringify({ code: 0, data: { ok: true } }))
+        }
       }
     }
   })
@@ -325,7 +338,8 @@ test('AIO 沙箱通过宿主桥发送 JSON、上传 base64 与还原下载 Blob'
     code: 0,
     data: '/infra/file/content?id=3'
   })
-  const upload = JSON.parse(calls[1].body)
+  assert.ok(calls[0].body instanceof Uint8Array)
+  const upload = JSON.parse(new TextDecoder().decode(calls[1].body))
   assert.equal(upload.name, 'hello.txt')
   assert.equal(upload.directory, 'avatar')
   assert.equal(upload.base64, 'aGVsbG8=')
