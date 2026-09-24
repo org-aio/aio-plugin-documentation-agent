@@ -486,10 +486,8 @@ fn normalize_database_url(value: &str) -> Result<String> {
         .map(|(key, value)| (key.into_owned(), value.into_owned()))
         .collect::<Vec<_>>();
 
-    if socket_only {
-        retained.retain(|(key, _)| key != "sslmode");
-        retained.push(("sslmode".to_owned(), "disable".to_owned()));
-    }
+    retained.retain(|(key, _)| key != "sslmode");
+    retained.push(("sslmode".to_owned(), "disable".to_owned()));
 
     url.set_query(None);
     if !retained.is_empty() {
