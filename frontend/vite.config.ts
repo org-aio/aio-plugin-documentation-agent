@@ -28,7 +28,8 @@ export default defineConfig(({ mode }) => {
       : undefined
 
   return {
-    base: appConfig.basePath,
+    // AIO 把插件资产挂载在随会话变化 token 路径下，必须使用相对资源地址。
+    base: './',
     plugins: [
       vue(),
       vueJsx(),

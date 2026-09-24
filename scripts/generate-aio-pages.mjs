@@ -19,10 +19,9 @@ for (const page of pages) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
-    <base href="/" />
     <meta name="aio-page-id" content="${page.id}" />
     <meta name="aio-route" content="${page.route}" />
-    <link rel="icon" href="/logo.png" />
+    <link rel="icon" href="../logo.png" />
     <title>${page.label}</title>
   </head>
   <body>
