@@ -472,18 +472,25 @@ fn normalize_database_url(value: &str) -> Result<String> {
         "password",
         "dbname",
     ];
-    let retained = url
+    let mut retained = url
         .query_pairs()
         .filter(|(key, _)| supported.contains(&key.as_ref()))
         .map(|(key, value)| (key.into_owned(), value.into_owned()))
         .collect::<Vec<_>>();
+
+    if socket_only {
+        retained.retain(|(key, _)| key != "sslmode");
+        retained.push(("sslmode".to_owned(), "disable".to_owned()));
+    }
+
     url.set_query(None);
     if !retained.is_empty() {
         let mut query = url.query_pairs_mut();
-        for (key, value) in retained {
+        for (key, value) in &retained {
             query.append_pair(&key, &value);
         }
     }
+
     if socket_only {
         let user = url.username();
         let password = url.password().unwrap_or_default();
