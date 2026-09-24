@@ -17,10 +17,29 @@ test('host login uses the AIO bridge byte protocol and returns a backend token',
     }
   })
   assert.equal(request.method, 'POST')
-  assert.equal(request.path, '/system/auth/host-login')
+  assert.equal(request.path, '/admin-api/system/auth/host-login')
   assert.ok(request.body instanceof Uint8Array)
   assert.equal(request.body.length, 0)
   assert.equal(token.accessToken, 'token')
+})
+
+test('host login follows a customized API base without producing a double slash', async () => {
+  let path
+  await requestHostSession(
+    {
+      request: async (value) => {
+        path = value.path
+        return {
+          status: 200,
+          body: new TextEncoder().encode(
+            JSON.stringify({ code: 0, data: { accessToken: 'token' } })
+          )
+        }
+      }
+    },
+    '/tenant-api/'
+  )
+  assert.equal(path, '/tenant-api/system/auth/host-login')
 })
 
 test('host login rejects business and transport failures', async () => {

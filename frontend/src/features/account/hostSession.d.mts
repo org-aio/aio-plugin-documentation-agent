@@ -14,5 +14,6 @@ export interface HostSessionToken {
 }
 
 export function requestHostSession(
-  bridge: HostSessionBridge | null | undefined
+  bridge: HostSessionBridge | null | undefined,
+  apiBase?: string
 ): Promise<HostSessionToken | null>

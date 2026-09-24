@@ -68,7 +68,7 @@ export const ensureHostSession = async (): Promise<boolean> => {
     return false
   }
   try {
-    const token = await requestHostSession(bridge)
+    const token = await requestHostSession(bridge, appConfig.apiBase)
     if (!token) {
       return false
     }

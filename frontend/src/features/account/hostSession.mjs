@@ -1,10 +1,11 @@
-export async function requestHostSession(bridge) {
+export async function requestHostSession(bridge, apiBase = '/admin-api') {
   if (!bridge || typeof bridge.request !== 'function') {
     return null
   }
+  const path = `${String(apiBase).replace(/\/+$/, '')}/system/auth/host-login`
   const response = await bridge.request({
     method: 'POST',
-    path: '/system/auth/host-login',
+    path,
     query: null,
     body: new Uint8Array()
   })
