@@ -9,6 +9,7 @@ use std::{
     time::Duration,
 };
 
+mod aio_pages;
 mod api;
 mod auth;
 mod boxun_actions;
@@ -67,12 +68,12 @@ async fn main() -> Result<()> {
         unsafe { env::set_var("PORT", port) };
     }
     let state = connect_state().await?;
-    eprintln!("资料员Agent 数据库就绪，开始初始化");
+    eprintln!("资料员服务平台 数据库就绪，开始初始化");
     seed::initialize(&state).await.map_err(|error| {
-        eprintln!("资料员Agent 初始化失败: {error}");
+        eprintln!("资料员服务平台 初始化失败: {error}");
         topcoat::Error::from(std::io::Error::other(error))
     })?;
-    eprintln!("资料员Agent 初始化完成，开始监听");
+    eprintln!("资料员服务平台 初始化完成，开始监听");
     serve(router(state)).await.map_err(topcoat::Error::from)
 }
 
@@ -121,18 +122,7 @@ async fn health() -> Result<&'static str> {
 
 #[route(GET "/aio/describe")]
 async fn describe() -> Result<Json<Value>> {
-    Ok(Json(json!({
-        "label": "资料员Agent",
-        "pages": [{
-            "id": "documentation-agent",
-            "label": "资料员Agent",
-            "entry": "index.html",
-            "scene": ["workspace", "工作空间"],
-            "menu_path": ["资料员Agent"],
-            "permission": null,
-            "surface": "workspace"
-        }]
-    })))
+    Ok(Json(aio_pages::description()))
 }
 
 async fn admin_api(cx: &Cx, body: Body) -> Result<Response> {
@@ -434,14 +424,14 @@ async fn connect_state() -> Result<AppState> {
         .or_else(|| env::var("BOXUN_DATABASE_URL").ok())
         .ok_or_else(|| topcoat::Error::from(std::io::Error::other("宿主未授权数据库")))?;
     let database_url = normalize_database_url(&database_url)?;
-    eprintln!("资料员Agent 开始连接宿主数据库");
+    eprintln!("资料员服务平台 开始连接宿主数据库");
     let (database, connection) = tokio_postgres::connect(&database_url, tokio_postgres::NoTls)
         .await
         .map_err(|error| {
-            eprintln!("资料员Agent 数据库连接失败: {error:?}");
+            eprintln!("资料员服务平台 数据库连接失败: {error:?}");
             topcoat::Error::from(std::io::Error::other(error.to_string()))
         })?;
-    eprintln!("资料员Agent 数据库连接成功");
+    eprintln!("资料员服务平台 数据库连接成功");
     tokio::spawn(async move {
         if let Err(error) = connection.await {
             eprintln!("Boxun Topcoat 数据库连接中断: {error}");

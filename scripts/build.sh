@@ -2,6 +2,8 @@
 set -eu
 cd "$(dirname "$0")/.."
 
+node scripts/generate-aio-pages.mjs
+
 cd frontend
 npm ci --ignore-scripts
 npm run build

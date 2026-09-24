@@ -2,6 +2,8 @@ import type { Component } from 'vue'
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 
 import { pageMetadata } from '@/features/navigation/catalog.mjs'
+import aioPages from '@/features/navigation/aio-pages.json'
+import { createAioEntryResolver } from '@/features/navigation/aio-route.mjs'
 import { isPathAccessible } from '@/features/navigation/access'
 import { ensureHostSession, hasSession, safeRedirect } from '@/utils/auth'
 
@@ -54,6 +56,8 @@ for (const route of routes) {
 
 export const availablePagePaths = routes.map((route) => route.path)
 
+const resolveAioEntryRoute = createAioEntryResolver(aioPages)
+
 export const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [{ path: '/', redirect: '/home' }, ...routes],
@@ -62,6 +66,10 @@ export const router = createRouter({
 
 // 登录页在壳外展示；退出后直接访问旧地址也必须重新登录。
 router.beforeEach(async (to) => {
+  const entryRoute = resolveAioEntryRoute(window.location.pathname, window.location.search)
+  if (entryRoute && to.path === '/home' && !to.query.fromAio) {
+    return { path: entryRoute, replace: true }
+  }
   if (!to.meta.public && !hasSession()) {
     await ensureHostSession()
   }

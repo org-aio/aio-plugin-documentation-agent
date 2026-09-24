@@ -1,7 +1,7 @@
 schema_version = 2
 
 [plugin.marketplace]
-title = "资料员Agent"
+title = "资料员服务平台"
 summary = "面向工程资料员的全栈业务平台：项目、商混、原材料、试块、委托单、见证/旁站/施工记录、天气、模板、系统权限与文件管理。"
 license = "MIT"
 tags = ["资料员", "工程资料", "Topcoat", "项目台账", "文档生成"]
