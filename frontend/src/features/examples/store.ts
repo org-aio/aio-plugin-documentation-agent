@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { appConfig } from '@/config'
+import { safeLocalStorage } from '@/utils/safeStorage'
 import {
   createSeedState,
   deleteCategory,
@@ -18,14 +19,14 @@ const state = ref<ExampleState>(createSeedState())
 const storageError = ref<string | null>(null)
 
 try {
-  state.value = readState(window.localStorage, storageKey)
+  state.value = readState(safeLocalStorage, storageKey)
 } catch (error) {
   storageError.value = error instanceof ExampleDataError ? error.key : 'examples.errors.storageRead'
 }
 
 function commit(next: ExampleState) {
   try {
-    writeState(window.localStorage, storageKey, next)
+    writeState(safeLocalStorage, storageKey, next)
   } catch {
     storageError.value = 'examples.errors.storageWrite'
     throw new ExampleDataError('examples.errors.storageWrite')

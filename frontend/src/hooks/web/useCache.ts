@@ -1,4 +1,5 @@
 import { appConfig } from '@/config'
+import { safeLocalStorage } from '@/utils/safeStorage'
 
 export const CACHE_KEY = {
   USER: 'user',
@@ -11,14 +12,14 @@ const storageKey = (key: string) => `${appConfig.appId}:page-cache:${key}`
 export const useCache = () => ({
   wsCache: {
     get: <T = unknown>(key: string): T | null => {
-      const value = localStorage.getItem(storageKey(key))
+      const value = safeLocalStorage.getItem(storageKey(key))
       return value === null ? null : (JSON.parse(value) as T)
     },
     set: (key: string, value: unknown) => {
-      localStorage.setItem(storageKey(key), JSON.stringify(value))
+      safeLocalStorage.setItem(storageKey(key), JSON.stringify(value))
     },
     delete: (key: string) => {
-      localStorage.removeItem(storageKey(key))
+      safeLocalStorage.removeItem(storageKey(key))
     }
   }
 })

@@ -1,6 +1,7 @@
 import { appConfig } from '@/config'
 import { ref, shallowRef } from 'vue'
 import { sameSessionIdentity, sessionIsActive } from '@/features/account/session.mjs'
+import { safeLocalStorage } from './safeStorage'
 export { safeRedirect } from '@/features/account/session.mjs'
 
 export interface SessionState {
@@ -18,7 +19,7 @@ export const SESSION_STORAGE_KEY = `${appConfig.appId}:session`
 
 const readSession = (): SessionState => {
   try {
-    const value: unknown = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '{}')
+    const value: unknown = JSON.parse(safeLocalStorage.getItem(SESSION_STORAGE_KEY) || '{}')
     return value && typeof value === 'object' && !Array.isArray(value)
       ? (value as SessionState)
       : {}
@@ -38,7 +39,7 @@ export const getTenantId = (): string => String(getSessionState().tenantId ?? ''
 
 const writeSession = (value: SessionState): void => {
   // 先持久化再发布状态；存储失败必须让调用方知晓，避免刷新后意外恢复会话。
-  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(value))
+  safeLocalStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(value))
   session.value = value
   sessionRevision.value += 1
 }
@@ -100,7 +101,7 @@ export const updateSessionPermissions = (permissions: string[], roles: string[])
     return
   }
   const value = { ...session.value, permissions, roles }
-  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(value))
+  safeLocalStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(value))
   session.value = value
 }
 
@@ -112,7 +113,7 @@ export const updateSessionTokens = (accessToken: string, refreshToken?: string):
     accessToken,
     refreshToken: refreshToken ?? session.value.refreshToken
   }
-  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(value))
+  safeLocalStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(value))
   session.value = value
 }
 

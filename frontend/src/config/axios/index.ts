@@ -14,6 +14,7 @@ import {
 } from '@/utils/auth'
 import { createSessionRefresher } from '@/features/account/refresh.mjs'
 import { MENUS_CHANGED_EVENT } from '@/features/navigation/events'
+import { safeLocalStorage } from '@/utils/safeStorage'
 
 export { SESSION_STORAGE_KEY } from '@/utils/auth'
 
@@ -27,7 +28,7 @@ const client = createRequestClient({
     onRefreshed: (accessToken, refreshToken) => updateSessionTokens(accessToken, refreshToken)
   }),
   demo: createDemoTransport({
-    storage: localStorage,
+    storage: safeLocalStorage,
     storageKey: `${appConfig.appId}:system-demo:v1`
   })
 })

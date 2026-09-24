@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import request from '@/config/axios'
+import { safeSessionStorage } from '@/utils/safeStorage'
 
 export type ProjectRecord = {
   id: string | number
@@ -25,7 +26,7 @@ export const PROJECT_STORAGE_KEY = 'boxun:current-project'
 // 这里沿用该语义，但用带应用前缀的 key，避免和其它系统冲突。
 const readStoredProjectId = (): string => {
   try {
-    return sessionStorage.getItem(PROJECT_STORAGE_KEY) || ''
+    return safeSessionStorage.getItem(PROJECT_STORAGE_KEY) || ''
   } catch {
     return ''
   }
@@ -73,9 +74,9 @@ export const setCurrentProject = (projectId: string | number | undefined | null)
   currentProjectId.value = value
   try {
     if (value) {
-      sessionStorage.setItem(PROJECT_STORAGE_KEY, value)
+      safeSessionStorage.setItem(PROJECT_STORAGE_KEY, value)
     } else {
-      sessionStorage.removeItem(PROJECT_STORAGE_KEY)
+      safeSessionStorage.removeItem(PROJECT_STORAGE_KEY)
     }
   } catch (error) {
     console.warn('无法保存当前项目，本次切换仅在当前页面生效。', error)

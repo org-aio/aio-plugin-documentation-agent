@@ -5,6 +5,7 @@ import { appConfig } from '@/config'
 import request from '@/config/axios'
 import { t } from '@/locales'
 import { safeRedirect } from '@/utils/auth'
+import { safeLocalStorage } from '@/utils/safeStorage'
 import { login } from './account'
 import { parseCaptchaConfig, type CaptchaConfig } from './captcha.mjs'
 import CaptchaChallenge from './CaptchaChallenge.vue'
@@ -19,7 +20,7 @@ const storageKey = `admin-shell:${appConfig.appId}:remembered-account:v1`
 const storageMessage = ref('')
 const readUsername = () => {
   try {
-    return props.rememberAccount ? localStorage.getItem(storageKey) || '' : ''
+    return props.rememberAccount ? safeLocalStorage.getItem(storageKey) || '' : ''
   } catch (error) {
     console.warn('无法读取记住的账号。', error)
     storageMessage.value = t('account.rememberAccountFailed')
@@ -40,9 +41,9 @@ let mounted = true
 const saveUsername = () => {
   try {
     if (props.rememberAccount && remember.value) {
-      localStorage.setItem(storageKey, credentials.username.trim())
+      safeLocalStorage.setItem(storageKey, credentials.username.trim())
     } else {
-      localStorage.removeItem(storageKey)
+      safeLocalStorage.removeItem(storageKey)
     }
     storageMessage.value = ''
   } catch (error) {

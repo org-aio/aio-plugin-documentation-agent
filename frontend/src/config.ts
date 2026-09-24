@@ -1,6 +1,7 @@
 import { reactive, ref, watch } from 'vue'
 import configuration from '../app.config.json'
 import { normalizeLoginConfiguration, type LoginConfiguration } from './features/login/config.mjs'
+import { safeLocalStorage } from './utils/safeStorage'
 
 export const appConfig = Object.freeze({
   ...configuration,
@@ -42,7 +43,7 @@ const defaults: AppSettings = {
 
 const readSettings = (): AppSettings => {
   try {
-    const saved: unknown = JSON.parse(localStorage.getItem(storageKey) || 'null')
+    const saved: unknown = JSON.parse(safeLocalStorage.getItem(storageKey) || 'null')
     if (!saved || typeof saved !== 'object') {
       return { ...defaults, login: { ...defaults.login } }
     }
@@ -110,7 +111,7 @@ watch(
       favicon.href = resolveAssetUrl(value.logo || appConfig.logo)
     }
     try {
-      localStorage.setItem(storageKey, JSON.stringify(value))
+      safeLocalStorage.setItem(storageKey, JSON.stringify(value))
       settingsSaveState.value = 'saved'
     } catch (error) {
       settingsSaveState.value = 'error'
