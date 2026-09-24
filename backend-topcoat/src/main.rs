@@ -459,6 +459,11 @@ fn normalize_database_url(value: &str) -> Result<String> {
         "connect_timeout",
         "options",
         "target_session_attrs",
+        "host",
+        "port",
+        "user",
+        "password",
+        "dbname",
     ];
     let retained = url
         .query_pairs()
@@ -531,5 +536,25 @@ mod tests {
     async fn channel_reports_zero_without_waiters() {
         let waiters = Mutex::new(Vec::<ChannelWaiter>::new());
         assert_eq!(push_channel(&waiters, "hello".into()).await, 0);
+    }
+
+    #[test]
+    fn preserves_process_database_socket_and_ignores_sqlx_only_options() {
+        let normalized = normalize_database_url(
+            "postgres://user:pass@localhost:5432/aio_plugin_components?sslmode=prefer&statement-cache-capacity=100&host=%2Fdatabase",
+        )
+        .expect("process 数据库 URL");
+        let url = url::Url::parse(&normalized).expect("规范化 URL");
+        assert_eq!(
+            url.query_pairs()
+                .find(|(key, _)| key == "host")
+                .map(|(_, value)| value.into_owned())
+                .as_deref(),
+            Some("/database")
+        );
+        assert!(
+            url.query_pairs()
+                .all(|(key, _)| key != "statement-cache-capacity")
+        );
     }
 }
