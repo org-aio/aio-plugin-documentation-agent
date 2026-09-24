@@ -2,12 +2,13 @@ import { appConfig } from '@/config'
 import { ref, shallowRef } from 'vue'
 import { sameSessionIdentity, sessionIsActive } from '@/features/account/session.mjs'
 import { safeLocalStorage } from './safeStorage'
+import { requestHostSession } from '@/features/account/hostSession.mjs'
 export { safeRedirect } from '@/features/account/session.mjs'
 
 export interface SessionState {
   mode?: 'demo' | 'api'
   signedOut?: boolean
-  userId?: number
+  userId?: number | string
   accessToken?: string
   refreshToken?: string
   tenantId?: string | number
@@ -59,26 +60,16 @@ export const ensureHostSession = async (): Promise<boolean> => {
         method: string
         path: string
         query?: string | null
-        body?: string
-      }) => Promise<{ status: number; body: string }>
+        body?: Uint8Array
+      }) => Promise<{ status: number; body: Uint8Array }>
     }
   })?.aioPlugin
   if (!bridge) {
     return false
   }
   try {
-    const response = await bridge.request({
-      method: 'POST',
-      path: '/system/auth/host-login',
-      query: null,
-      body: ''
-    })
-    const payload = response.body ? JSON.parse(response.body) : null
-    const token = payload?.data
-    if (response.status < 200 || response.status >= 300 || payload?.code !== 0) {
-      return false
-    }
-    if (typeof token?.accessToken !== 'string' || !token.accessToken) {
+    const token = await requestHostSession(bridge)
+    if (!token) {
       return false
     }
     saveApiSession({
