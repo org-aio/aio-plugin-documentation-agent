@@ -13,6 +13,10 @@ export function resolveAioDocumentRoute(
   pages: readonly AioRoutePage[]
 ): string | null
 
+export function isAioDocumentEntry(
+  documentValue: Pick<Document, 'querySelector'> | null | undefined
+): boolean
+
 export function needsAioEntryRedirect(
   to: {
     path: string

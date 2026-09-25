@@ -29,6 +29,10 @@ export function resolveAioDocumentRoute(documentValue, pages) {
   return (id && pages.find((page) => page.id === id)?.route) || null
 }
 
+export function isAioDocumentEntry(documentValue) {
+  return Boolean(documentValue?.querySelector?.('meta[name="aio-page-id"]')?.content)
+}
+
 export function needsAioEntryRedirect(to, entryRoute) {
   if (!entryRoute || to.path !== '/home' || to.query?.fromAio) {
     return false
@@ -52,7 +56,8 @@ export function isAioEmbedded(windowValue) {
   }
   const pathname = String(windowValue.location?.pathname ?? '')
   return Boolean(
-    windowValue.aioPlugin ||
+    isAioDocumentEntry(windowValue.document) ||
+      windowValue.aioPlugin ||
       (windowValue.parent != null && windowValue.parent !== windowValue) ||
       windowValue.location?.origin === 'null' ||
       pathname.includes('/api/runtime/components/assets/')

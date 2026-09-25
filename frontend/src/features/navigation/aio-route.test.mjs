@@ -5,6 +5,7 @@ import {
   createAioEntryResolver,
   filterMenusByRoutes,
   isAioEmbedded,
+  isAioDocumentEntry,
   needsAioEntryRedirect,
   resolveAioDocumentRoute,
   shouldUseAioMemoryHistory
@@ -114,6 +115,22 @@ test('detects the AIO sandbox before the host bridge is injected', () => {
       parent: undefined
     }),
     false
+  )
+})
+
+test('uses the generated page marker before the parent bridge exists', () => {
+  const documentValue = {
+    querySelector: (selector) =>
+      selector === 'meta[name="aio-page-id"]' ? { content: 'menu-25' } : null
+  }
+  assert.equal(isAioDocumentEntry(documentValue), true)
+  assert.equal(
+    isAioEmbedded({
+      document: documentValue,
+      location: { pathname: '/pages/menu-25.html', origin: 'https://aio.addzero.site' },
+      parent: undefined
+    }),
+    true
   )
 })
 
