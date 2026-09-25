@@ -4,12 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/layout/AdminLayout.vue'
 import { ensureHostSession, hasSession, sessionRevision } from '@/utils/auth'
 import { t } from '@/locales'
+import { isAioEmbedded } from '@/features/navigation/aio-route.mjs'
 
 const route = useRoute()
 const router = useRouter()
-const embedded = computed(() =>
-  Boolean((globalThis.window as (Window & { aioPlugin?: unknown }) | undefined)?.aioPlugin)
-)
+const embedded = computed(() => isAioEmbedded(globalThis.window))
 const ready = ref(hasSession() || route.meta.public === true || embedded.value)
 const sessionError = ref('')
 const connectHost = async (): Promise<void> => {

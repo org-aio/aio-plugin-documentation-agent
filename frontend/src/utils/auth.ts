@@ -39,19 +39,20 @@ export const getAccessToken = (): string => getSessionState().accessToken ?? ''
 export const getRefreshToken = (): string => getSessionState().refreshToken ?? ''
 export const getTenantId = (): string => String(getSessionState().tenantId ?? '')
 
-const hostSessionBridge = (
-  globalThis.window as Window & {
-    aioPlugin?: {
-      request: (payload: {
-        method: string
-        path: string
-        query?: string | null
-        body?: Uint8Array
-      }) => Promise<{ status: number; body: Uint8Array }>
+const getHostSessionBridge = () =>
+  (
+    globalThis.window as Window & {
+      aioPlugin?: {
+        request: (payload: {
+          method: string
+          path: string
+          query?: string | null
+          body?: Uint8Array
+        }) => Promise<{ status: number; body: Uint8Array }>
+      }
     }
-  }
-)?.aioPlugin
-const loadHostSession = createHostSessionLoader(hostSessionBridge, appConfig.apiBase)
+  )?.aioPlugin
+const loadHostSession = createHostSessionLoader(getHostSessionBridge, appConfig.apiBase)
 
 const writeSession = (value: SessionState): void => {
   // 先持久化再发布状态；存储失败必须让调用方知晓，避免刷新后意外恢复会话。
@@ -68,9 +69,6 @@ export const saveApiSession = (value: SessionState): void => {
 export const ensureHostSession = async (): Promise<boolean> => {
   if (hasSession()) {
     return true
-  }
-  if (!hostSessionBridge) {
-    return false
   }
   try {
     const token: HostSessionToken | null = await loadHostSession()

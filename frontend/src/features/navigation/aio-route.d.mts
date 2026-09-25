@@ -25,6 +25,8 @@ export function needsAioEntryRedirect(
 
 export function shouldUseAioMemoryHistory(windowValue: Window | undefined): boolean
 
+export function isAioEmbedded(windowValue: Window | undefined): boolean
+
 export function filterMenusByRoutes<
   T extends { path?: string; component?: string; children?: T[] }
 >(menus: readonly T[], routes: Iterable<string>): T[]

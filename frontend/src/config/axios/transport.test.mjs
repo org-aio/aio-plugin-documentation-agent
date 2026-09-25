@@ -400,3 +400,37 @@ test('桥接请求会先等待宿主会话且并发只初始化一次', async ()
   assert.deepEqual(await requests, [true, true])
   assert.ok(calls.every((request) => request.query === 'access_token=host-token'))
 })
+
+test('API 请求会读取启动后才注入的宿主桥', async () => {
+  const originalWindow = globalThis.window
+  const calls = []
+  try {
+    globalThis.window = {}
+    const client = createRequestClient({
+      mode: 'api',
+      apiBase: '/admin-api',
+      session: () => ({ accessToken: 'late-bridge-token' }),
+      demo: {
+        request: () => {
+          throw new Error('unexpected')
+        }
+      },
+      fetcher: () => {
+        throw new Error('沙箱不得直接 fetch')
+      }
+    })
+    globalThis.window.aioPlugin = {
+      request: async (request) => {
+        calls.push(request)
+        return {
+          status: 200,
+          body: new TextEncoder().encode(JSON.stringify({ code: 0, data: 'late' }))
+        }
+      }
+    }
+    assert.equal(await client.get({ url: '/system/user/page' }), 'late')
+    assert.equal(calls[0].path, '/admin-api/system/user/page')
+  } finally {
+    globalThis.window = originalWindow
+  }
+})

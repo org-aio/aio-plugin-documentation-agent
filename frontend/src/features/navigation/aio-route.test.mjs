@@ -4,6 +4,7 @@ import test from 'node:test'
 import {
   createAioEntryResolver,
   filterMenusByRoutes,
+  isAioEmbedded,
   needsAioEntryRedirect,
   resolveAioDocumentRoute,
   shouldUseAioMemoryHistory
@@ -58,17 +59,11 @@ test('does not redirect a home entry back to itself', () => {
     false
   )
   assert.equal(
-    needsAioEntryRedirect(
-      { path: '/home', fullPath: '/home', query: {} },
-      '/boxun/project-info'
-    ),
+    needsAioEntryRedirect({ path: '/home', fullPath: '/home', query: {} }, '/boxun/project-info'),
     true
   )
   assert.equal(
-    needsAioEntryRedirect(
-      { path: '/home', fullPath: '/home', query: {} },
-      '/home?projectId=42'
-    ),
+    needsAioEntryRedirect({ path: '/home', fullPath: '/home', query: {} }, '/home?projectId=42'),
     true
   )
   assert.equal(
@@ -89,6 +84,37 @@ test('uses memory history only for AIO or opaque-origin embedded windows', () =>
   assert.equal(shouldUseAioMemoryHistory({ location: { origin: 'null' } }), true)
   assert.equal(shouldUseAioMemoryHistory({ location: { origin: 'https://example.test' } }), false)
   assert.equal(shouldUseAioMemoryHistory(undefined), false)
+})
+
+test('detects the AIO sandbox before the host bridge is injected', () => {
+  assert.equal(
+    isAioEmbedded({
+      location: { pathname: '/api/runtime/components/assets/token/pages/menu-5.html' },
+      parent: {}
+    }),
+    true
+  )
+  assert.equal(
+    isAioEmbedded({
+      location: { pathname: '/', origin: 'null' },
+      parent: {}
+    }),
+    true
+  )
+  assert.equal(
+    isAioEmbedded({
+      location: { pathname: '/', origin: 'https://example.test' },
+      parent: {}
+    }),
+    true
+  )
+  assert.equal(
+    isAioEmbedded({
+      location: { pathname: '/', origin: 'https://example.test' },
+      parent: undefined
+    }),
+    false
+  )
 })
 
 test('keeps only business routes and their parent groups', () => {

@@ -83,3 +83,17 @@ test('host session loader shares one in-flight request', async () => {
   await load()
   assert.equal(calls, 2)
 })
+
+test('host session loader resolves a bridge that is injected after startup', async () => {
+  let bridge
+  const load = createHostSessionLoader(() => bridge)
+  bridge = {
+    request: async () => ({
+      status: 200,
+      body: new TextEncoder().encode(
+        JSON.stringify({ code: 0, data: { accessToken: 'late-token' } })
+      )
+    })
+  }
+  assert.equal((await load()).accessToken, 'late-token')
+})

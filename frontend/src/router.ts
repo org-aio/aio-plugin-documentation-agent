@@ -10,6 +10,7 @@ import { pageMetadata } from '@/features/navigation/catalog.mjs'
 import aioPages from '@/features/navigation/aio-pages.json'
 import {
   createAioEntryResolver,
+  isAioEmbedded,
   needsAioEntryRedirect,
   resolveAioDocumentRoute,
   shouldUseAioMemoryHistory
@@ -67,7 +68,7 @@ for (const route of routes) {
 export const availablePagePaths = routes.map((route) => route.path)
 
 const resolveAioEntryRoute = createAioEntryResolver(aioPages)
-const embedded = Boolean((window as Window & { aioPlugin?: unknown }).aioPlugin)
+const embedded = isAioEmbedded(window)
 
 export const router = createRouter({
   history: shouldUseAioMemoryHistory(window)

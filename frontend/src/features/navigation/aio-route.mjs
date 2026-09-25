@@ -43,7 +43,20 @@ export function needsAioEntryRedirect(to, entryRoute) {
 }
 
 export function shouldUseAioMemoryHistory(windowValue) {
-  return Boolean(windowValue?.aioPlugin) || windowValue?.location?.origin === 'null'
+  return isAioEmbedded(windowValue)
+}
+
+export function isAioEmbedded(windowValue) {
+  if (!windowValue) {
+    return false
+  }
+  const pathname = String(windowValue.location?.pathname ?? '')
+  return Boolean(
+    windowValue.aioPlugin ||
+      (windowValue.parent != null && windowValue.parent !== windowValue) ||
+      windowValue.location?.origin === 'null' ||
+      pathname.includes('/api/runtime/components/assets/')
+  )
 }
 
 export function filterMenusByRoutes(menus, routes) {

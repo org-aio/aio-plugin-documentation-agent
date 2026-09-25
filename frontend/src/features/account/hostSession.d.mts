@@ -14,11 +14,11 @@ export interface HostSessionToken {
 }
 
 export function requestHostSession(
-  bridge: HostSessionBridge | null | undefined,
+  bridge: HostSessionBridge | (() => HostSessionBridge | null | undefined) | null | undefined,
   apiBase?: string
 ): Promise<HostSessionToken | null>
 
 export function createHostSessionLoader(
-  bridge: HostSessionBridge | null | undefined,
+  bridge: HostSessionBridge | (() => HostSessionBridge | null | undefined) | null | undefined,
   apiBase?: string
 ): () => Promise<HostSessionToken | null>

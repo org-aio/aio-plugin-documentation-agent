@@ -59,7 +59,7 @@ export function createRequestClient({
   refreshSession,
   ensureSession,
   fetcher = globalThis.fetch,
-  bridge = globalThis.window?.aioPlugin
+  bridge
 }) {
   if (!['demo', 'api'].includes(mode)) {
     throw new Error('dataMode 必须为 demo 或 api。')
@@ -67,6 +67,7 @@ export function createRequestClient({
   // 无感刷新令牌：并发 401 只触发一次刷新，其余请求等待同一 Promise。
   let refreshing
   let preparingSession
+  const resolveBridge = () => bridge ?? globalThis.window?.aioPlugin
   const prepareSession = () => {
     if (!ensureSession || session().accessToken) {
       return Promise.resolve()
@@ -117,7 +118,7 @@ export function createRequestClient({
       const values = Array.isArray(value) ? value : [value]
       values.forEach((item) => query.append(key, String(item)))
     }
-    const bridgeRequest = async (retried = false) => {
+    const bridgeRequest = async (activeBridge, retried = false) => {
       const credentials = session()
       if (credentials.accessToken && !query.has('access_token')) {
         query.set('access_token', credentials.accessToken)
@@ -125,7 +126,7 @@ export function createRequestClient({
       const requestBody = encodeBody(
         options.data == null ? '' : JSON.stringify(await serializeFormData(options.data))
       )
-      const response = await bridge.request({
+      const response = await activeBridge.request({
         method,
         path: `${apiBase.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`,
         query: query.toString() || null,
@@ -136,7 +137,7 @@ export function createRequestClient({
       if (response.status === 401 && !retried) {
         const refreshed = await refreshOnce()
         if (refreshed) {
-          return bridgeRequest(true)
+          return bridgeRequest(activeBridge, true)
         }
       }
       if (response.status < 200 || response.status >= 300) {
@@ -155,7 +156,7 @@ export function createRequestClient({
         if (Number(payload.code) === 401 && !retried) {
           const refreshed = await refreshOnce()
           if (refreshed) {
-            return bridgeRequest(true)
+            return bridgeRequest(activeBridge, true)
           }
         }
         throw Object.assign(new Error(payload.msg || 'API 业务错误。'), { code: payload.code })
@@ -174,9 +175,10 @@ export function createRequestClient({
       }
       return kind === 'original' || kind === 'upload' ? payload : payload.data
     }
-    if (bridge && (mode === 'api' || requiresApi)) {
+    const activeBridge = resolveBridge()
+    if (activeBridge && (mode === 'api' || requiresApi)) {
       await prepareSession()
-      return bridgeRequest()
+      return bridgeRequest(activeBridge)
     }
     if (!apiBase) {
       throw new Error('API 模式需要配置 apiBase。')

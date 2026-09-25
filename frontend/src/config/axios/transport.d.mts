@@ -29,7 +29,7 @@ export function createRequestClient(options: {
       method: string
       path: string
       query?: string | null
-      body?: string
-    }) => Promise<{ status: number; body: string; content_type?: string }>
+      body?: Uint8Array
+    }) => Promise<{ status: number; body: Uint8Array; content_type?: string }>
   }
 }): RequestClient
