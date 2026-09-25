@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { createAioEntryResolver, resolveAioDocumentRoute } from './aio-route.mjs'
+import {
+  createAioEntryResolver,
+  filterMenusByRoutes,
+  resolveAioDocumentRoute
+} from './aio-route.mjs'
 
 const resolve = createAioEntryResolver([
   { id: 'menu-5', route: '/home' },
@@ -32,5 +36,40 @@ test('resolves the route from the generated entry metadata after the host rewrit
   assert.equal(
     resolveAioDocumentRoute(documentValue, [{ id: 'menu-22', route: '/boxun/project-info' }]),
     '/boxun/project-info'
+  )
+})
+
+test('keeps only business routes and their parent groups', () => {
+  const menus = [
+    {
+      id: 1,
+      path: '/system',
+      children: [{ id: 2, path: 'user', component: 'system/user/index' }]
+    },
+    {
+      id: 10,
+      path: '/boxun/raw-data',
+      children: [
+        { id: 11, path: 'commercial-concrete-ledger', component: 'boxun/commercial-concrete-ledger/index' }
+      ]
+    },
+    { id: 20, path: '/boxun/project-info', component: 'boxun/project-info/index' }
+  ]
+  assert.deepEqual(
+    filterMenusByRoutes(menus, ['/boxun/commercial-concrete-ledger', '/boxun/project-info']),
+    [
+      {
+        id: 10,
+        path: '/boxun/raw-data',
+        children: [
+          {
+            id: 11,
+            path: 'commercial-concrete-ledger',
+            component: 'boxun/commercial-concrete-ledger/index'
+          }
+        ]
+      },
+      { id: 20, path: '/boxun/project-info', component: 'boxun/project-info/index' }
+    ]
   )
 })

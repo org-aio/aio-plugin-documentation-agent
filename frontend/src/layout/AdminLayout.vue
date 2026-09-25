@@ -13,6 +13,8 @@ import {
   type MenuRecord,
   type NavigationItem
 } from '@/features/navigation/catalog.mjs'
+import aioPages from '@/features/navigation/aio-pages.json'
+import { filterMenusByRoutes } from '@/features/navigation/aio-route.mjs'
 import { applyMenuAccess, getNoCachePaths, resetMenuAccess } from '@/features/navigation/access'
 import { MENUS_CHANGED_EVENT } from '@/features/navigation/events'
 import UserMenu from './UserMenu.vue'
@@ -54,8 +56,12 @@ const refreshNavigation = async () => {
       appConfig.dataMode === 'demo'
         ? await request.get<MenuRecord[]>({ url: '/system/menu/list' })
         : accountState.permissionInfo?.menus ?? []
-    applyMenuAccess(menus, availablePagePaths)
-    navigation.value = buildNavigation(menus, availablePagePaths)
+    const businessMenus = filterMenusByRoutes(
+      menus,
+      aioPages.map((page) => page.route)
+    )
+    applyMenuAccess(businessMenus, availablePagePaths)
+    navigation.value = buildNavigation(businessMenus, availablePagePaths)
     navigationError.value = ''
   } catch (error) {
     resetMenuAccess()

@@ -28,3 +28,36 @@ export function resolveAioDocumentRoute(documentValue, pages) {
   const id = documentValue.querySelector?.('meta[name="aio-page-id"]')?.content
   return (id && pages.find((page) => page.id === id)?.route) || null
 }
+
+export function filterMenusByRoutes(menus, routes) {
+  const allowed = new Set(routes)
+  const resolve = (parentPath, path) => {
+    const value = String(path ?? '').trim()
+    if (!value || value.includes('://') || value.split('/').some((part) => ['.', '..'].includes(part))) {
+      return ''
+    }
+    const absolute = value.startsWith('/') ? value : `${parentPath}/${value}`
+    return absolute.replace(/\/{2,}/g, '/').replace(/\/$/, '') || '/'
+  }
+  const componentPath = (value) => {
+    const component = String(value ?? '').trim()
+    if (!component || component.includes('://') || component.split('/').some((part) => ['.', '..'].includes(part))) {
+      return ''
+    }
+    return `/${component.replace(/^\/+/, '')}`.replace(/\/index$/, '') || '/'
+  }
+  const walk = (rows, parentPath = '') =>
+    (rows ?? []).flatMap((row) => {
+      const path = resolve(parentPath, row.path)
+      const children = walk(row.children ?? [], path)
+      const leafAllowed = allowed.has(path) || allowed.has(componentPath(row.component))
+      if (!children.length && !leafAllowed) {
+        return []
+      }
+      if (!children.length) {
+        return [{ ...row }]
+      }
+      return [{ ...row, children }]
+    })
+  return walk(menus)
+}

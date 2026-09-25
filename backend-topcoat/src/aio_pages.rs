@@ -22,7 +22,7 @@ pub(crate) fn description() -> Value {
                 "id": page.id,
                 "label": page.label,
                 "entry": format!("pages/{}.html", page.id_for_entry()),
-                "scene": ["workspace", "工作空间"],
+                "scene": ["documentation-agent", "资料员服务平台"],
                 "menu_path": page.menu_path,
                 "permission": null,
                 "surface": "workspace"
@@ -50,10 +50,17 @@ mod tests {
         let value = description();
         assert_eq!(value["label"], "资料员服务平台");
         let pages = value["pages"].as_array().expect("pages 必须是数组");
-        assert_eq!(pages.len(), 30);
+        assert_eq!(pages.len(), 14);
+        assert_eq!(pages[0]["scene"], json!(["documentation-agent", "资料员服务平台"]));
         assert_eq!(pages[0]["entry"], "pages/menu-5.html");
         assert!(pages.iter().any(|page| page["label"] == "试块评定"));
         assert_eq!(pages[0]["menu_path"], json!([]));
-        assert_eq!(pages[1]["menu_path"], json!(["系统管理"]));
+        assert_eq!(pages[1]["menu_path"], json!([]));
+        assert!(pages.iter().all(|page| {
+            !matches!(page["label"].as_str(), Some("用户管理" | "角色管理" | "菜单管理" | "文件管理"))
+                && !page["menu_path"].as_array().is_some_and(|path| {
+                    path.iter().any(|group| matches!(group.as_str(), Some("系统管理" | "基础设施" | "功能示例")))
+                })
+        }));
     }
 }
