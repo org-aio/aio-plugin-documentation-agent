@@ -53,9 +53,6 @@ export default defineConfig(({ mode }) => {
         input: {
           index: fileURLToPath(new URL('./index.html', import.meta.url)),
           ...aioPageInputs
-        },
-        output: {
-          manualChunks: { 'element-plus': ['element-plus'] }
         }
       }
     }
