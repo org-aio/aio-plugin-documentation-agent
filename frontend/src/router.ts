@@ -1,11 +1,17 @@
 import type { Component } from 'vue'
-import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
+import {
+  createMemoryHistory,
+  createRouter,
+  createWebHashHistory,
+  type RouteRecordRaw
+} from 'vue-router'
 
 import { pageMetadata } from '@/features/navigation/catalog.mjs'
 import aioPages from '@/features/navigation/aio-pages.json'
 import {
   createAioEntryResolver,
-  resolveAioDocumentRoute
+  resolveAioDocumentRoute,
+  shouldUseAioMemoryHistory
 } from '@/features/navigation/aio-route.mjs'
 import { isPathAccessible } from '@/features/navigation/access'
 import { ensureHostSession, hasSession, safeRedirect } from '@/utils/auth'
@@ -62,7 +68,9 @@ export const availablePagePaths = routes.map((route) => route.path)
 const resolveAioEntryRoute = createAioEntryResolver(aioPages)
 
 export const router = createRouter({
-  history: createWebHashHistory(import.meta.env.BASE_URL),
+  history: shouldUseAioMemoryHistory(window)
+    ? createMemoryHistory(import.meta.env.BASE_URL)
+    : createWebHashHistory(import.meta.env.BASE_URL),
   routes: [{ path: '/', redirect: '/home' }, ...routes],
   scrollBehavior: () => ({ top: 0 })
 })

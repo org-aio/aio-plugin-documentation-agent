@@ -4,7 +4,8 @@ import test from 'node:test'
 import {
   createAioEntryResolver,
   filterMenusByRoutes,
-  resolveAioDocumentRoute
+  resolveAioDocumentRoute,
+  shouldUseAioMemoryHistory
 } from './aio-route.mjs'
 
 const resolve = createAioEntryResolver([
@@ -39,6 +40,13 @@ test('resolves the route from the generated entry metadata after the host rewrit
   )
 })
 
+test('uses memory history only for AIO or opaque-origin embedded windows', () => {
+  assert.equal(shouldUseAioMemoryHistory({ aioPlugin: {} }), true)
+  assert.equal(shouldUseAioMemoryHistory({ location: { origin: 'null' } }), true)
+  assert.equal(shouldUseAioMemoryHistory({ location: { origin: 'https://example.test' } }), false)
+  assert.equal(shouldUseAioMemoryHistory(undefined), false)
+})
+
 test('keeps only business routes and their parent groups', () => {
   const menus = [
     {
@@ -50,7 +58,11 @@ test('keeps only business routes and their parent groups', () => {
       id: 10,
       path: '/boxun/raw-data',
       children: [
-        { id: 11, path: 'commercial-concrete-ledger', component: 'boxun/commercial-concrete-ledger/index' }
+        {
+          id: 11,
+          path: 'commercial-concrete-ledger',
+          component: 'boxun/commercial-concrete-ledger/index'
+        }
       ]
     },
     { id: 20, path: '/boxun/project-info', component: 'boxun/project-info/index' }

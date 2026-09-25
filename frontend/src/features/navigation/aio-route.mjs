@@ -29,11 +29,19 @@ export function resolveAioDocumentRoute(documentValue, pages) {
   return (id && pages.find((page) => page.id === id)?.route) || null
 }
 
+export function shouldUseAioMemoryHistory(windowValue) {
+  return Boolean(windowValue?.aioPlugin) || windowValue?.location?.origin === 'null'
+}
+
 export function filterMenusByRoutes(menus, routes) {
   const allowed = new Set(routes)
   const resolve = (parentPath, path) => {
     const value = String(path ?? '').trim()
-    if (!value || value.includes('://') || value.split('/').some((part) => ['.', '..'].includes(part))) {
+    if (
+      !value ||
+      value.includes('://') ||
+      value.split('/').some((part) => ['.', '..'].includes(part))
+    ) {
       return ''
     }
     const absolute = value.startsWith('/') ? value : `${parentPath}/${value}`
@@ -41,7 +49,11 @@ export function filterMenusByRoutes(menus, routes) {
   }
   const componentPath = (value) => {
     const component = String(value ?? '').trim()
-    if (!component || component.includes('://') || component.split('/').some((part) => ['.', '..'].includes(part))) {
+    if (
+      !component ||
+      component.includes('://') ||
+      component.split('/').some((part) => ['.', '..'].includes(part))
+    ) {
       return ''
     }
     return `/${component.replace(/^\/+/, '')}`.replace(/\/index$/, '') || '/'
