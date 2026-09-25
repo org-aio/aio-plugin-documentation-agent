@@ -67,6 +67,7 @@ for (const route of routes) {
 export const availablePagePaths = routes.map((route) => route.path)
 
 const resolveAioEntryRoute = createAioEntryResolver(aioPages)
+const embedded = Boolean((window as Window & { aioPlugin?: unknown }).aioPlugin)
 
 export const router = createRouter({
   history: shouldUseAioMemoryHistory(window)
@@ -85,10 +86,10 @@ router.beforeEach(async (to) => {
     const target = router.resolve(entryRoute)
     return { path: target.path, query: target.query, hash: target.hash, replace: true }
   }
-  if (!to.meta.public && !hasSession()) {
+  if (!to.meta.public && !hasSession() && !embedded) {
     await ensureHostSession()
   }
-  if (!to.meta.public && !hasSession()) {
+  if (!to.meta.public && !hasSession() && !embedded) {
     return { path: '/login', query: { redirect: to.fullPath }, replace: true }
   }
   if (to.path === '/login' && hasSession()) {

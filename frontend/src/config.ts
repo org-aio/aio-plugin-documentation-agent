@@ -57,7 +57,7 @@ const readSettings = (): AppSettings => {
         Object.assign(result, { [key]: values[key] })
       }
     }
-    if (result.logo === '/logo.svg') {
+    if (result.logo === '/logo.svg' || result.logo === '/logo.png') {
       result.logo = defaults.logo
     }
     result.login = normalizeLoginConfiguration(values.login, defaults.login)
@@ -75,12 +75,14 @@ export const resetSettings = () => {
   Object.assign(settings, defaults, { login: { ...defaults.login } })
 }
 
-// 本地图片跟随部署前缀；外部图片和内嵌图片保持原地址。
+// 本地图片跟随当前构建产物；外部图片和内嵌图片保持原地址。
+const localAssetBase = new URL('../', import.meta.url)
+
 export const resolveAssetUrl = (value: string): string => {
   if (/^(https?:\/\/|data:image\/|blob:)/i.test(value)) {
     return value
   }
-  return `${import.meta.env.BASE_URL}${value.replace(/^\/+/, '')}`
+  return new URL(value.replace(/^\/+/, ''), localAssetBase).href
 }
 
 const mixColor = (color: string, target: number, weight: number) => {

@@ -1,4 +1,5 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
@@ -9,6 +10,15 @@ use crate::AppState;
 
 const ACCESS_SECONDS: i64 = 86_400;
 const REFRESH_SECONDS: i64 = 2_592_000;
+const HOST_SESSION_REUSE_SECONDS: i64 = 300;
+
+static HOST_SESSION_LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
+static HOST_SESSIONS: OnceLock<Mutex<HashMap<String, CachedHostSession>>> = OnceLock::new();
+
+struct CachedHostSession {
+    expires_at: i64,
+    payload: Arc<Value>,
+}
 
 fn validation() -> Validation {
     let mut validation = Validation::new(Algorithm::HS256);
@@ -42,6 +52,19 @@ pub(crate) async fn host_login(
     external_user_id: &str,
     external_tenant_id: &str,
 ) -> Result<Value, String> {
+    let _guard = HOST_SESSION_LOCK
+        .get_or_init(|| tokio::sync::Mutex::new(()))
+        .lock()
+        .await;
+    let cache_key = format!("{external_tenant_id}\0{external_user_id}");
+    let now = chrono::Utc::now().timestamp();
+    let sessions = HOST_SESSIONS.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Ok(mut sessions) = sessions.lock() {
+        sessions.retain(|_, session| session.expires_at > now);
+        if let Some(session) = sessions.get(&cache_key) {
+            return Ok((*session.payload).clone());
+        }
+    }
     let existing = state
         .database
         .query_opt(
@@ -84,7 +107,17 @@ pub(crate) async fn host_login(
         )
         .await
         .map_err(db_error)?;
-    token_payload(state, user_id, tenant_id).await
+    let payload = token_payload(state, user_id, tenant_id).await?;
+    if let Ok(mut sessions) = sessions.lock() {
+        sessions.insert(
+            cache_key,
+            CachedHostSession {
+                expires_at: now + HOST_SESSION_REUSE_SECONDS,
+                payload: Arc::new(payload.clone()),
+            },
+        );
+    }
+    Ok(payload)
 }
 
 pub(crate) async fn login(state: &AppState, body: Value) -> Result<Value, String> {

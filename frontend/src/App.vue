@@ -10,7 +10,7 @@ const router = useRouter()
 const embedded = computed(() =>
   Boolean((globalThis.window as (Window & { aioPlugin?: unknown }) | undefined)?.aioPlugin)
 )
-const ready = ref(hasSession() || route.meta.public === true)
+const ready = ref(hasSession() || route.meta.public === true || embedded.value)
 const sessionError = ref('')
 const connectHost = async (): Promise<void> => {
   sessionError.value = ''
@@ -24,7 +24,10 @@ const connectHost = async (): Promise<void> => {
     ready.value = true
   }
 }
-void connectHost()
+// 宿主页面直接挂载，只有页面真正发业务请求时才初始化会话。
+if (!embedded.value) {
+  void connectHost()
+}
 watch(sessionRevision, () => {
   if (!hasSession() && !route.meta.public) {
     void router.replace({ path: '/login', query: { redirect: route.fullPath } })
@@ -34,7 +37,7 @@ watch(sessionRevision, () => {
 
 <template>
   <RouterView v-if="ready && route.meta.public" />
-  <RouterView v-else-if="ready && hasSession() && embedded" />
+  <RouterView v-else-if="ready && embedded" />
   <AdminLayout v-else-if="hasSession()" :key="sessionRevision" />
   <main v-else-if="ready" class="host-session-error">
     <ElResult icon="warning" :title="t('account.hostSessionFailedTitle')" :sub-title="sessionError">

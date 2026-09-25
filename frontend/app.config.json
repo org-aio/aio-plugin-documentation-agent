@@ -3,7 +3,7 @@
   "template": "yudao",
   "appId": "boxun",
   "title": "资料员服务平台",
-  "logo": "/logo.png",
+  "logo": "logo.svg",
   "themeColor": "#409eff",
   "locale": "zh-CN",
   "basePath": "/",

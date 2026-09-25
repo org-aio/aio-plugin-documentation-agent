@@ -57,6 +57,7 @@ export function createRequestClient({
   session,
   demo,
   refreshSession,
+  ensureSession,
   fetcher = globalThis.fetch,
   bridge = globalThis.window?.aioPlugin
 }) {
@@ -65,6 +66,21 @@ export function createRequestClient({
   }
   // 无感刷新令牌：并发 401 只触发一次刷新，其余请求等待同一 Promise。
   let refreshing
+  let preparingSession
+  const prepareSession = () => {
+    if (!ensureSession || session().accessToken) {
+      return Promise.resolve()
+    }
+    if (!preparingSession) {
+      preparingSession = Promise.resolve()
+        .then(() => ensureSession())
+        .catch(() => false)
+        .finally(() => {
+          preparingSession = undefined
+        })
+    }
+    return preparingSession
+  }
   const refreshOnce = () => {
     if (!refreshSession) {
       return Promise.resolve(false)
@@ -124,10 +140,13 @@ export function createRequestClient({
         }
       }
       if (response.status < 200 || response.status >= 300) {
-        throw Object.assign(new Error(payload?.msg || payload?.error || `API 请求失败（HTTP ${response.status}）。`), {
-          status: response.status,
-          code: payload?.code
-        })
+        throw Object.assign(
+          new Error(payload?.msg || payload?.error || `API 请求失败（HTTP ${response.status}）。`),
+          {
+            status: response.status,
+            code: payload?.code
+          }
+        )
       }
       if (!payload || typeof payload !== 'object' || !Object.hasOwn(payload, 'code')) {
         throw new Error('API 响应缺少业务状态码 code。')
@@ -142,7 +161,11 @@ export function createRequestClient({
         throw Object.assign(new Error(payload.msg || 'API 业务错误。'), { code: payload.code })
       }
       if (kind === 'download') {
-        if (payload.data && typeof payload.data === 'object' && typeof payload.data.base64 === 'string') {
+        if (
+          payload.data &&
+          typeof payload.data === 'object' &&
+          typeof payload.data.base64 === 'string'
+        ) {
           return new Blob([bytesFromBase64(payload.data.base64)], {
             type: payload.data.contentType || 'application/octet-stream'
           })
@@ -152,11 +175,13 @@ export function createRequestClient({
       return kind === 'original' || kind === 'upload' ? payload : payload.data
     }
     if (bridge && (mode === 'api' || requiresApi)) {
+      await prepareSession()
       return bridgeRequest()
     }
     if (!apiBase) {
       throw new Error('API 模式需要配置 apiBase。')
     }
+    await prepareSession()
     const suffix = query.toString()
     const url = `${apiBase.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}${suffix ? `?${suffix}` : ''}`
     const credentials = session()

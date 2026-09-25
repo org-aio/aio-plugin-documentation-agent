@@ -26,3 +26,16 @@ export async function requestHostSession(bridge, apiBase = '/admin-api') {
   }
   return token
 }
+
+export function createHostSessionLoader(bridge, apiBase = '/admin-api') {
+  let pending
+  return () => {
+    if (!pending) {
+      const operation = requestHostSession(bridge, apiBase)
+      pending = operation.finally(() => {
+        pending = undefined
+      })
+    }
+    return pending
+  }
+}

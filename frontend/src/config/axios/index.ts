@@ -6,6 +6,7 @@ import { createDemoTransport } from '@/features/system-demo/model.mjs'
 import { createRequestClient, type RequestOptions } from './transport.mjs'
 
 import {
+  ensureHostSession,
   getRefreshToken,
   getSessionState,
   invalidateSession,
@@ -22,6 +23,7 @@ const client = createRequestClient({
   mode: appConfig.dataMode,
   apiBase: appConfig.apiBase,
   session: getSessionState,
+  ensureSession: ensureHostSession,
   refreshSession: createSessionRefresher({
     apiBase: appConfig.apiBase,
     getRefreshToken,

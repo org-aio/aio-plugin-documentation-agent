@@ -17,3 +17,8 @@ export function requestHostSession(
   bridge: HostSessionBridge | null | undefined,
   apiBase?: string
 ): Promise<HostSessionToken | null>
+
+export function createHostSessionLoader(
+  bridge: HostSessionBridge | null | undefined,
+  apiBase?: string
+): () => Promise<HostSessionToken | null>

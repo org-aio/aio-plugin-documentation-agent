@@ -21,7 +21,7 @@ for (const page of pages) {
     <meta name="color-scheme" content="light dark" />
     <meta name="aio-page-id" content="${page.id}" />
     <meta name="aio-route" content="${page.route}" />
-    <link rel="icon" href="../logo.png" />
+    <link rel="icon" href="../logo.svg" />
     <title>${page.label}</title>
   </head>
   <body>

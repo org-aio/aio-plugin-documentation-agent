@@ -1,8 +1,9 @@
 import { appConfig } from '@/config'
 import { ref, shallowRef } from 'vue'
 import { sameSessionIdentity, sessionIsActive } from '@/features/account/session.mjs'
+import type { HostSessionToken } from '@/features/account/hostSession.d.mts'
 import { safeLocalStorage } from './safeStorage'
-import { requestHostSession } from '@/features/account/hostSession.mjs'
+import { createHostSessionLoader } from '@/features/account/hostSession.mjs'
 export { safeRedirect } from '@/features/account/session.mjs'
 
 export interface SessionState {
@@ -38,6 +39,20 @@ export const getAccessToken = (): string => getSessionState().accessToken ?? ''
 export const getRefreshToken = (): string => getSessionState().refreshToken ?? ''
 export const getTenantId = (): string => String(getSessionState().tenantId ?? '')
 
+const hostSessionBridge = (
+  globalThis.window as Window & {
+    aioPlugin?: {
+      request: (payload: {
+        method: string
+        path: string
+        query?: string | null
+        body?: Uint8Array
+      }) => Promise<{ status: number; body: Uint8Array }>
+    }
+  }
+)?.aioPlugin
+const loadHostSession = createHostSessionLoader(hostSessionBridge, appConfig.apiBase)
+
 const writeSession = (value: SessionState): void => {
   // 先持久化再发布状态；存储失败必须让调用方知晓，避免刷新后意外恢复会话。
   safeLocalStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(value))
@@ -54,21 +69,11 @@ export const ensureHostSession = async (): Promise<boolean> => {
   if (hasSession()) {
     return true
   }
-  const bridge = (globalThis.window as Window & {
-    aioPlugin?: {
-      request: (payload: {
-        method: string
-        path: string
-        query?: string | null
-        body?: Uint8Array
-      }) => Promise<{ status: number; body: Uint8Array }>
-    }
-  })?.aioPlugin
-  if (!bridge) {
+  if (!hostSessionBridge) {
     return false
   }
   try {
-    const token = await requestHostSession(bridge, appConfig.apiBase)
+    const token: HostSessionToken | null = await loadHostSession()
     if (!token) {
       return false
     }

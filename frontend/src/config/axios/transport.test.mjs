@@ -297,8 +297,14 @@ test('AIO 沙箱通过宿主桥发送 JSON、上传 base64 与还原下载 Blob'
     mode: 'api',
     apiBase: '/admin-api',
     session: () => ({ accessToken: 'bridge-token', tenantId: 9 }),
-    demo: { request: () => { throw new Error('unexpected') } },
-    fetcher: () => { throw new Error('沙箱不得直接 fetch') },
+    demo: {
+      request: () => {
+        throw new Error('unexpected')
+      }
+    },
+    fetcher: () => {
+      throw new Error('沙箱不得直接 fetch')
+    },
     bridge: {
       request: async (request) => {
         calls.push(request)
@@ -328,7 +334,9 @@ test('AIO 沙箱通过宿主桥发送 JSON、上传 base64 与还原下载 Blob'
       }
     }
   })
-  assert.deepEqual(await client.get({ url: '/system/user/page', params: { pageNo: 2 } }), { ok: true })
+  assert.deepEqual(await client.get({ url: '/system/user/page', params: { pageNo: 2 } }), {
+    ok: true
+  })
   assert.equal(calls[0].path, '/admin-api/system/user/page')
   assert.equal(calls[0].query, 'pageNo=2&access_token=bridge-token')
   const form = new FormData()
@@ -345,4 +353,50 @@ test('AIO 沙箱通过宿主桥发送 JSON、上传 base64 与还原下载 Blob'
   assert.equal(upload.base64, 'aGVsbG8=')
   const blob = await client.download({ url: '/system/user/export-excel' })
   assert.equal(await blob.text(), 'hello')
+})
+
+test('桥接请求会先等待宿主会话且并发只初始化一次', async () => {
+  let ensured = 0
+  let token = ''
+  let release
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  const calls = []
+  const client = createRequestClient({
+    mode: 'api',
+    apiBase: '/admin-api',
+    session: () => ({ accessToken: token }),
+    ensureSession: async () => {
+      ensured += 1
+      await gate
+      token = 'host-token'
+      return true
+    },
+    demo: {
+      request: () => {
+        throw new Error('unexpected')
+      }
+    },
+    bridge: {
+      request: async (request) => {
+        calls.push(request)
+        return {
+          status: 200,
+          body: new TextEncoder().encode(JSON.stringify({ code: 0, data: true }))
+        }
+      }
+    }
+  })
+  const requests = Promise.all([
+    client.get({ url: '/system/user/page' }),
+    client.get({ url: '/system/role/page' })
+  ])
+  while (ensured === 0) {
+    await Promise.resolve()
+  }
+  assert.equal(ensured, 1)
+  release()
+  assert.deepEqual(await requests, [true, true])
+  assert.ok(calls.every((request) => request.query === 'access_token=host-token'))
 })

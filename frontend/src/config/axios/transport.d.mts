@@ -22,6 +22,7 @@ export function createRequestClient(options: {
   session: () => Session
   demo: DemoTransport
   refreshSession?: () => Promise<boolean>
+  ensureSession?: () => Promise<boolean>
   fetcher?: typeof fetch
   bridge?: {
     request: (payload: {
