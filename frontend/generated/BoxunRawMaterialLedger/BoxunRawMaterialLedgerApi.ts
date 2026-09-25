@@ -27,3 +27,22 @@ export const updateBoxunRawMaterialLedger = (data: EntityInput) => request.put<n
 export const deleteBoxunRawMaterialLedger = (id: EntityId) => request.delete<boolean>({ url: '/boxun/raw-material-ledger/delete?id=' + id })
 
 export const deleteBoxunRawMaterialLedgerList = (ids: EntityId[]) => request.delete<boolean>({ url: '/boxun/raw-material-ledger/delete-list', params: { ids: ids.join(',') } })
+
+/** 批量新增（原 addBatch）。 */
+export const addBatchBoxunRawMaterialLedger = (rows: EntityInput[]) =>
+  request.post<EntityRecord[]>({ url: '/boxun/raw-material-ledger/add-batch', data: rows })
+
+/** 原材料下拉（原 rawMaterialPullDown）。 */
+export const pullDownBoxunRawMaterialLedger = (params?: Record<string, unknown>) =>
+  request.get<EntityRecord[]>({ url: '/boxun/raw-material-ledger/raw-material-pull-down', params })
+
+/** 按项目生成原材料台账（原 dataGeneration）。 */
+export const generateBoxunRawMaterialLedgerData = (projectId: string) =>
+  request.post<EntityRecord[]>({ url: '/boxun/raw-material-ledger/data-generation', params: { projectId } })
+
+/** 生成各类原材料记录（原 generateVariousRawMaterialRecords）。 */
+export const generateBoxunRawMaterialLedgerRecords = (ids: EntityId[]) =>
+  request.post<EntityRecord[]>({
+    url: '/boxun/raw-material-ledger/generate-various-raw-material-records',
+    data: { ids }
+  })

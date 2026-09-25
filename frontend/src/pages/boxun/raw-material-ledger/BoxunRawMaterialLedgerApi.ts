@@ -41,5 +41,8 @@ export const generateBoxunRawMaterialLedgerData = (projectId: string) =>
   request.post<EntityRecord[]>({ url: '/boxun/raw-material-ledger/data-generation', params: { projectId } })
 
 /** 生成各类原材料记录（原 generateVariousRawMaterialRecords）。 */
-export const generateBoxunRawMaterialLedgerRecords = (rows: EntityInput[]) =>
-  request.post<number>({ url: '/boxun/raw-material-ledger/generate-various-raw-material-records', data: rows })
+export const generateBoxunRawMaterialLedgerRecords = (ids: EntityId[]) =>
+  request.post<EntityRecord[]>({
+    url: '/boxun/raw-material-ledger/generate-various-raw-material-records',
+    data: { ids }
+  })

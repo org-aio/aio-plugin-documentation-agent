@@ -41,6 +41,15 @@
           <el-button type="primary" plain @click="handleGenerateByProject">
             <Icon class="mr-5px" icon="ep:magic-stick" />按项目生成
           </el-button>
+          <el-button
+            :disabled="checkedIds.length === 0"
+            :loading="generateRecordLoading"
+            type="primary"
+            plain
+            @click="handleGenerateWitnessRecords"
+          >
+            <Icon class="mr-5px" icon="ep:document-add" />生成见证记录
+          </el-button>
           <el-button :loading="exportLoading" type="success" @click="handleExport">
             <Icon class="mr-5px" icon="ep:download" />导出
           </el-button>
@@ -203,6 +212,20 @@ const handleGenerateByProject = async () => {
   const rows = await BoxunRawMaterialLedgerApi.generateBoxunRawMaterialLedgerData(currentProjectId.value)
   message.success(`已生成 ${rows.length} 条原材料记录`)
   await getList()
+}
+
+const generateRecordLoading = ref(false)
+const handleGenerateWitnessRecords = async () => {
+  if (checkedIds.value.length === 0) return
+  generateRecordLoading.value = true
+  try {
+    const records = await BoxunRawMaterialLedgerApi.generateBoxunRawMaterialLedgerRecords(
+      checkedIds.value
+    )
+    message.success(records.length > 0 ? `已生成 ${records.length} 条见证记录` : '未找到可生成的数据')
+  } finally {
+    generateRecordLoading.value = false
+  }
 }
 
 onMounted(getList)
