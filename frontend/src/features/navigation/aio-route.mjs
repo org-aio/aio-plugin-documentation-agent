@@ -29,6 +29,19 @@ export function resolveAioDocumentRoute(documentValue, pages) {
   return (id && pages.find((page) => page.id === id)?.route) || null
 }
 
+export function needsAioEntryRedirect(to, entryRoute) {
+  if (!entryRoute || to.path !== '/home' || to.query?.fromAio) {
+    return false
+  }
+  const target = new URL(entryRoute, 'https://aio.invalid')
+  const current = new URL(to.fullPath || to.path, 'https://aio.invalid')
+  return (
+    target.pathname !== current.pathname ||
+    target.search !== current.search ||
+    target.hash !== current.hash
+  )
+}
+
 export function shouldUseAioMemoryHistory(windowValue) {
   return Boolean(windowValue?.aioPlugin) || windowValue?.location?.origin === 'null'
 }

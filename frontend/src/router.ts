@@ -10,6 +10,7 @@ import { pageMetadata } from '@/features/navigation/catalog.mjs'
 import aioPages from '@/features/navigation/aio-pages.json'
 import {
   createAioEntryResolver,
+  needsAioEntryRedirect,
   resolveAioDocumentRoute,
   shouldUseAioMemoryHistory
 } from '@/features/navigation/aio-route.mjs'
@@ -80,8 +81,9 @@ router.beforeEach(async (to) => {
   const entryRoute =
     resolveAioDocumentRoute(document, aioPages) ??
     resolveAioEntryRoute(window.location.pathname, window.location.search)
-  if (entryRoute && to.path === '/home' && !to.query.fromAio) {
-    return { path: entryRoute, replace: true }
+  if (entryRoute && needsAioEntryRedirect(to, entryRoute)) {
+    const target = router.resolve(entryRoute)
+    return { path: target.path, query: target.query, hash: target.hash, replace: true }
   }
   if (!to.meta.public && !hasSession()) {
     await ensureHostSession()

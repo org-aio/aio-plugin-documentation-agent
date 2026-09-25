@@ -13,6 +13,16 @@ export function resolveAioDocumentRoute(
   pages: readonly AioRoutePage[]
 ): string | null
 
+export function needsAioEntryRedirect(
+  to: {
+    path: string
+    fullPath?: string
+    query?: Record<string, unknown>
+    hash?: string
+  },
+  entryRoute: string | null
+): boolean
+
 export function shouldUseAioMemoryHistory(windowValue: Window | undefined): boolean
 
 export function filterMenusByRoutes<

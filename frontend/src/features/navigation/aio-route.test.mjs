@@ -4,6 +4,7 @@ import test from 'node:test'
 import {
   createAioEntryResolver,
   filterMenusByRoutes,
+  needsAioEntryRedirect,
   resolveAioDocumentRoute,
   shouldUseAioMemoryHistory
 } from './aio-route.mjs'
@@ -37,6 +38,49 @@ test('resolves the route from the generated entry metadata after the host rewrit
   assert.equal(
     resolveAioDocumentRoute(documentValue, [{ id: 'menu-22', route: '/boxun/project-info' }]),
     '/boxun/project-info'
+  )
+})
+
+test('does not redirect a home entry back to itself', () => {
+  assert.equal(
+    needsAioEntryRedirect({ path: '/home', fullPath: '/home', query: {} }, '/home'),
+    false
+  )
+  assert.equal(
+    needsAioEntryRedirect(
+      {
+        path: '/boxun/project-info',
+        fullPath: '/boxun/project-info',
+        query: {}
+      },
+      '/boxun/project-info'
+    ),
+    false
+  )
+  assert.equal(
+    needsAioEntryRedirect(
+      { path: '/home', fullPath: '/home', query: {} },
+      '/boxun/project-info'
+    ),
+    true
+  )
+  assert.equal(
+    needsAioEntryRedirect(
+      { path: '/home', fullPath: '/home', query: {} },
+      '/home?projectId=42'
+    ),
+    true
+  )
+  assert.equal(
+    needsAioEntryRedirect(
+      {
+        path: '/home',
+        fullPath: '/home?projectId=42',
+        query: { projectId: '42' }
+      },
+      '/home?projectId=42'
+    ),
+    false
   )
 })
 
