@@ -116,5 +116,9 @@ export const messages: Record<string, string> = {
     '无法保存到当前浏览器，设置仅在当前页面生效。请检查浏览器存储空间或隐私设置。',
   'error.title': '页面未找到',
   'error.description': '这个页面可能已被移动，或访问地址有误。',
-  'error.backHome': '返回首页'
+  'error.backHome': '返回首页',
+  'account.hostSessionFailedTitle': '插件接入失败',
+  'account.hostSessionFailed': '无法从 AIO 宿主取得登录会话，请重试或重新打开插件页面。',
+  'account.hostSessionConnecting': '正在连接资料员服务平台',
+  'account.retry': '重新连接'
 }
