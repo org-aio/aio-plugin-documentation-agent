@@ -14,3 +14,7 @@ app.use(ElementPlus, { locale: zhCn })
 installPageHost(app)
 app.use(router)
 app.mount('#app')
+if (globalThis.window.__aioBootstrapTimer) {
+  globalThis.window.clearTimeout(globalThis.window.__aioBootstrapTimer)
+  delete globalThis.window.__aioBootstrapTimer
+}

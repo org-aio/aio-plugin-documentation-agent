@@ -1,4 +1,8 @@
 declare global {
+  interface Window {
+    __aioBootstrapTimer?: number
+  }
+
   type Nullable<T> = T | null
   type Recordable<T = unknown> = Record<string, T>
   type DictDataType = import('../utils/dict').DictDataType

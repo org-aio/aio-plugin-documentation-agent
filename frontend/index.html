@@ -40,6 +40,30 @@
         gap: 10px;
       }
 
+      .app-bootstrap-loading__error {
+        display: none;
+        max-width: 420px;
+        text-align: center;
+      }
+
+      .app-bootstrap-loading__error button {
+        margin-top: 12px;
+        padding: 6px 14px;
+        border: 1px solid #409eff;
+        border-radius: 6px;
+        color: #409eff;
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .app-bootstrap-loading.is-error .app-bootstrap-loading__status {
+        display: none;
+      }
+
+      .app-bootstrap-loading.is-error .app-bootstrap-loading__error {
+        display: block;
+      }
+
       .app-bootstrap-loading__spinner {
         width: 18px;
         height: 18px;
@@ -82,8 +106,33 @@
           <span class="app-bootstrap-loading__spinner" aria-hidden="true"></span>
           <span>正在加载页面</span>
         </div>
+        <div class="app-bootstrap-loading__error">
+          <div>页面加载超时，请检查网络后重试。</div>
+          <button type="button" onclick="location.reload()">重新加载</button>
+        </div>
       </div>
     </div>
+    <script>
+      window.__aioBootstrapTimer = window.setTimeout(function () {
+        var loading = document.querySelector('.app-bootstrap-loading')
+        if (loading) {
+          loading.classList.add('is-error')
+        }
+      }, 30000)
+    </script>
+    <script>
+      window.addEventListener(
+        'error',
+        function (event) {
+          var loading = document.querySelector('.app-bootstrap-loading')
+          if (loading && event.target && event.target.tagName === 'SCRIPT') {
+            window.__aioBootstrapTimer && window.clearTimeout(window.__aioBootstrapTimer)
+            loading.classList.add('is-error')
+          }
+        },
+        true
+      )
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
