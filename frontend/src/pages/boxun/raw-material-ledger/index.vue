@@ -43,6 +43,15 @@
           </el-button>
           <el-button
             :disabled="checkedIds.length === 0"
+            :loading="entrustLoading"
+            type="primary"
+            plain
+            @click="handleEntrust"
+          >
+            <Icon class="mr-5px" icon="ep:document-add" />去委托
+          </el-button>
+          <el-button
+            :disabled="checkedIds.length === 0"
             :loading="generateRecordLoading"
             type="primary"
             plain
@@ -215,6 +224,28 @@ const handleGenerateByProject = async () => {
 }
 
 const generateRecordLoading = ref(false)
+const entrustLoading = ref(false)
+const handleEntrust = async () => {
+  if (checkedIds.value.length === 0) return
+  await loadProjects()
+  if (!currentProjectId.value) {
+    message.warning('请先选择项目')
+    return
+  }
+  entrustLoading.value = true
+  try {
+    const created = await BoxunRawMaterialLedgerApi.entrustBoxunRawMaterialLedger(
+      checkedIds.value,
+      currentProjectId.value
+    )
+    message.success(`已生成 ${created} 张委托单`)
+    checkedIds.value = []
+    await getList()
+  } finally {
+    entrustLoading.value = false
+  }
+}
+
 const handleGenerateWitnessRecords = async () => {
   if (checkedIds.value.length === 0) return
   generateRecordLoading.value = true

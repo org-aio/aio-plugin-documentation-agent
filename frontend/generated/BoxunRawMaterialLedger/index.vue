@@ -40,6 +40,15 @@
           </el-button>
           <el-button
             :disabled="checkedIds.length === 0"
+            :loading="entrustLoading"
+            type="primary"
+            plain
+            @click="handleEntrust"
+          >
+            <Icon class="mr-5px" icon="ep:document-add" />去委托
+          </el-button>
+          <el-button
+            :disabled="checkedIds.length === 0"
             :loading="generateRecordLoading"
             type="primary"
             plain
@@ -195,6 +204,28 @@ const handleExport = async () => {
     download.excel(data, 'boxunRawMaterialLedger.xls')
   } finally {
     exportLoading.value = false
+  }
+}
+
+const entrustLoading = ref(false)
+const handleEntrust = async () => {
+  if (checkedIds.value.length === 0) return
+  const projectId = String(rows.value.find((row) => row.id === checkedIds.value[0])?.projectId ?? '')
+  if (!projectId) {
+    message.warning('所选台账缺少项目')
+    return
+  }
+  entrustLoading.value = true
+  try {
+    const created = await BoxunRawMaterialLedgerApi.entrustBoxunRawMaterialLedger(
+      checkedIds.value,
+      projectId
+    )
+    message.success(`已生成 ${created} 张委托单`)
+    checkedIds.value = []
+    await getList()
+  } finally {
+    entrustLoading.value = false
   }
 }
 

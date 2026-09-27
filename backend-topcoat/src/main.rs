@@ -20,6 +20,9 @@ mod seed;
 mod system;
 mod weather;
 
+#[cfg(test)]
+mod parity_tests;
+
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::sync::{Mutex, oneshot};
@@ -252,21 +255,7 @@ async fn dispatch(
         } else {
             export::export_system(state, route, &query).await
         }
-    } else if matches!(
-        route,
-        "homepage"
-            | "project-info"
-            | "project-company"
-            | "commission-order"
-            | "block-retention-ledger"
-            | "raw-material-ledger"
-            | "commercial-concrete-ledger"
-            | "template-management"
-            | "historical-weather"
-            | "account-payment"
-            | "channel"
-    ) && is_action(route, operation)
-    {
+    } else if is_action(route, operation) {
         boxun_actions::handle(
             state,
             authenticated,
@@ -335,6 +324,7 @@ fn is_action(route: &str, operation: &str) -> bool {
             )
             | ("block-retention-ledger", "entrust-the-test-block")
             | ("block-retention-ledger", "evaluate-strength")
+            | ("block-retention-ledger", "specimen-group-numbers")
             | ("block-retention-ledger", "generate-multi-kit")
             | ("block-retention-ledger", "gen-and-send-email")
             | ("raw-material-ledger", "to-entrust-raw-materials")

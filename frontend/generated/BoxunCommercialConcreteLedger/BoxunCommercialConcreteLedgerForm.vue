@@ -91,10 +91,11 @@
           </el-form-item>
         </el-col>
 </el-row>
+      <SpecimenGroupCalculator v-model:busy="calculationLoading" :model="formData" route="commercial-concrete-ledger" :disabled="formLoading" />
     </el-form>
 
     <template #footer>
-      <el-button :disabled="formLoading" type="primary" @click="submitForm">确定</el-button>
+      <el-button :disabled="formLoading || calculationLoading" type="primary" @click="submitForm">确定</el-button>
       <el-button @click="dialogVisible = false">取消</el-button>
     </template>
   </Dialog>
@@ -102,6 +103,7 @@
 
 <script setup lang="ts">
 import * as BoxunCommercialConcreteLedgerApi from './BoxunCommercialConcreteLedgerApi'
+import SpecimenGroupCalculator from '@/features/ledger/SpecimenGroupCalculator.vue'
 
 type BoxunCommercialConcreteLedgerFormData = Parameters<typeof BoxunCommercialConcreteLedgerApi.createBoxunCommercialConcreteLedger>[0]
 type EntityId = string | number
@@ -115,6 +117,7 @@ const { t } = useI18n()
 const dialogVisible = ref(false)
 const dialogTitle = ref('')
 const formLoading = ref(false)
+const calculationLoading = ref(false)
 const formType = ref<'create' | 'update'>('create')
 const editingId = ref<EntityId>()
 const formRef = ref()
@@ -175,7 +178,7 @@ defineExpose({ open })
 
 
 const submitForm = async () => {
-  if (formLoading.value) return
+  if (formLoading.value || calculationLoading.value) return
 
 
 

@@ -2,6 +2,8 @@
 
 `资料员服务平台` 是 AIO v2 `process` 全栈插件，后端由 Topcoat 实现。它把原 `boxun-app` 的项目资料、业务台账、生成记录和系统管理能力装进一个可由租户安装即用的插件。
 
+插件身份只有一个来源：本仓库。AIO 市场展示的插件名来自 `aio-plugin.toml` 的 `[plugin.marketplace].title`，来源仓库来自当前仓库的 Git 地址，发布版本由构建交付流程生成；三者不重复维护到其他清单。`boxun` 仅作为既有数据库表、`/admin-api/boxun/**` 路由和前端本地存储的兼容标识保留，外部安装、升级和排障始终以 `aio-plugin-documentation-agent` 仓库为准。
+
 插件使用 AIO 提供的租户隔离 PostgreSQL，前端通过 `window.aioPlugin` 调用后端，不接触数据库凭据或宿主会话 Cookie。首次进入时前端会使用宿主验证过的用户与租户上下文自动建立会话。
 
 ## 功能
@@ -25,6 +27,22 @@ sh scripts/build.sh
 ```
 
 脚本先在 `frontend/` 安装锁定依赖并构建 Vue 管理端，再用 Topcoat 后端构建 Linux x86_64 ELF 到 `dist/boxun-topcoat-server`，前端静态资源位于 `dist/frontend`。AIO 宿主安装时执行 `backend-topcoat/migrations` 中的受控 PostgreSQL 迁移。
+
+## 回归验证
+
+前端在 `frontend/` 执行 `npm run check`；后端执行：
+
+```bash
+cargo test --locked --manifest-path backend-topcoat/Cargo.toml
+BOXUN_TEST_DATABASE_URL='host=/测试数据库套接字 port=55439 user=boxun_test dbname=postgres' \
+  cargo test --locked --manifest-path backend-topcoat/Cargo.toml -- --include-ignored
+```
+
+数据库回归在独立事务和临时 schema 中执行全部安装迁移，结束后回滚。覆盖委托单生成三类记录、试件组数规则、商混表单字段与空值保存、项目筛选、单类型生成不写其他记录，以及试块同组多行样品完整性。数据库账号需要创建 schema 的权限。
+
+商混和试块表单共用 `frontend/src/features/ledger/SpecimenGroupCalculator.vue`，计算期间禁止保存，输入改变后丢弃过期结果。业务 CRUD 在接口边界映射驼峰字段与数据库列，日期、方量和空值按实际列类型绑定。
+
+上述回归不代表 Boxun 全量功能迁移完成。旧版附件再生成、按筛选条件批量下载与模板渲染仍需逐项对照；本地构建和测试也不代表已发布到 AIO 租户。
 
 ## 接口
 

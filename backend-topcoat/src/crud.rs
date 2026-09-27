@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
 
 use serde_json::{Map, Value, json};
-use tokio_postgres::types::ToSql;
+use tokio_postgres::types::{IsNull, ToSql, Type};
 
 use crate::AppState;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) enum Param {
     Text(String),
     I16(i16),
@@ -14,14 +14,24 @@ pub(crate) enum Param {
     Float(f64),
     Bool(bool),
     Timestamp(chrono::NaiveDateTime),
-    #[expect(dead_code, reason = "保留日期参数类型供后续日期字段使用")]
     Date(chrono::NaiveDate),
     Null,
 }
 
 impl Param {
     pub(crate) fn as_sql(&self) -> &(dyn ToSql + Sync) {
-        match self {
+        self
+    }
+}
+
+// 空值必须适用于任意列类型；其他参数仍由驱动校验类型，避免静默转换。
+impl ToSql for Param {
+    fn to_sql(
+        &self,
+        ty: &Type,
+        out: &mut bytes::BytesMut,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
+        let value: &(dyn ToSql + Sync) = match self {
             Self::Text(value) => value,
             Self::I16(value) => value,
             Self::I32(value) => value,
@@ -30,9 +40,16 @@ impl Param {
             Self::Bool(value) => value,
             Self::Timestamp(value) => value,
             Self::Date(value) => value,
-            Self::Null => &Option::<String>::None,
-        }
+            Self::Null => return Ok(IsNull::Yes),
+        };
+        value.to_sql_checked(ty, out)
     }
+
+    fn accepts(_: &Type) -> bool {
+        true
+    }
+
+    tokio_postgres::types::to_sql_checked!();
 }
 
 pub(crate) fn sql_refs(params: &[Param]) -> Vec<&(dyn ToSql + Sync)> {
@@ -126,6 +143,7 @@ pub(crate) const ENTITIES: &[Entity] = &[
         route: "bystander-record",
         table: "boxun_bystander_record",
         columns: &[
+            "project_id",
             "fk_sh_id",
             "fk_wt_id",
             "key_parts_of_bystanders",
@@ -161,6 +179,17 @@ pub(crate) const ENTITIES: &[Entity] = &[
         route: "commercial-concrete-ledger",
         table: "boxun_wtsj_commercial_concrete_ledger",
         columns: &[
+            "fk_project_id",
+            "name_of_commercial_mixing_station",
+            "impermeability_level",
+            "strength_remarks",
+            "number_of_standard_curing_specimen_groups",
+            "number_of_sets_of_impermeable_test_pieces",
+            "number_of_specimens_in_the_same_culture",
+            "number_of_demolding_specimen_groups",
+            "syntrophic_temperature",
+            "accompanying_documents",
+            "day28_data",
             "project_id",
             "material_name",
             "strength_grade",
@@ -185,6 +214,7 @@ pub(crate) const ENTITIES: &[Entity] = &[
             "report_number",
         ],
         filters: &[
+            "fk_project_id",
             "project_id",
             "material_name",
             "strength_grade",
@@ -255,6 +285,12 @@ pub(crate) const ENTITIES: &[Entity] = &[
         route: "concrete-construction-record",
         table: "boxun_wtsj_concrete_construction_record",
         columns: &[
+            "project_id",
+            "fk_sh_id",
+            "number_of_standard_curing_specimen_groups",
+            "number_of_sets_of_impermeable_test_pieces",
+            "number_of_specimens_in_the_same_culture",
+            "number_of_demolding_specimen_groups",
             "fk_sk_id",
             "production_date",
             "concat_position",
@@ -437,6 +473,7 @@ pub(crate) const ENTITIES: &[Entity] = &[
             "remarks",
             "test_number",
             "testing_conclusion",
+            "sampling_and_inspection_status",
             "sy_bs",
         ],
         filters: &[
@@ -553,7 +590,7 @@ async fn page(
     );
     let refs = sql_refs(&list_params);
     let rows = state.database.query(&sql, &refs).await.map_err(db_error)?;
-    Ok(json!({"list": rows.iter().map(row_value).collect::<Vec<_>>(), "total": total}))
+    Ok(json!({"list": rows.iter().map(api_row_value).collect::<Vec<_>>(), "total": total}))
 }
 
 async fn get(
@@ -568,7 +605,7 @@ async fn get(
         .query_opt(&sql, &[&id])
         .await
         .map_err(db_error)?;
-    Ok(row.as_ref().map(row_value).unwrap_or(Value::Null))
+    Ok(row.as_ref().map(api_row_value).unwrap_or(Value::Null))
 }
 
 async fn simple_list(
@@ -583,7 +620,7 @@ async fn simple_list(
     );
     let refs = sql_refs(&params);
     let rows = state.database.query(&sql, &refs).await.map_err(db_error)?;
-    Ok(Value::Array(rows.iter().map(row_value).collect()))
+    Ok(Value::Array(rows.iter().map(api_row_value).collect()))
 }
 
 async fn list_by_condition(
@@ -621,7 +658,10 @@ async fn create(state: &AppState, entity: &Entity, body: Value) -> Result<Value,
     params.push(Param::Timestamp(chrono::Utc::now().naive_utc()));
     let column_types = column_types(state, entity).await?;
     for column in entity.columns {
-        if let Some(value) = map.get(*column) {
+        if let Some(value) = map
+            .get(&api_field_name(column))
+            .or_else(|| map.get(*column))
+        {
             columns.push((*column).to_owned());
             params.push(json_param(
                 value,
@@ -648,7 +688,7 @@ async fn create(state: &AppState, entity: &Entity, body: Value) -> Result<Value,
         .query_one(&sql, &refs)
         .await
         .map_err(db_error)?;
-    Ok(row_value(&row))
+    Ok(api_row_value(&row))
 }
 
 async fn update(state: &AppState, entity: &Entity, body: Value) -> Result<Value, String> {
@@ -664,7 +704,10 @@ async fn update(state: &AppState, entity: &Entity, body: Value) -> Result<Value,
     params.push(Param::Timestamp(chrono::Utc::now().naive_utc()));
     let column_types = column_types(state, entity).await?;
     for column in entity.columns {
-        if let Some(value) = map.get(*column) {
+        if let Some(value) = map
+            .get(&api_field_name(column))
+            .or_else(|| map.get(*column))
+        {
             params.push(json_param(
                 value,
                 column_types.get(*column).map(String::as_str),
@@ -751,14 +794,15 @@ fn filters(
     let mut params = Vec::<Param>::new();
     for key in entity.filters {
         let Some(value) = query
-            .get(*key)
+            .get(&api_field_name(key))
+            .or_else(|| query.get(*key))
             .and_then(|values| values.first())
             .filter(|value| !value.is_empty())
         else {
             continue;
         };
         params.push(Param::Text(value.clone()));
-        clauses.push(format!("{} = ${}", quote(key), params.len()));
+        clauses.push(format!("{}::text = ${}", quote(key), params.len()));
     }
     Ok((
         if clauses.is_empty() {
@@ -768,6 +812,39 @@ fn filters(
         },
         params,
     ))
+}
+
+fn api_field_name(column: &str) -> String {
+    let mut name = String::new();
+    let mut capitalize = false;
+    for character in column.chars() {
+        if character == '_' {
+            capitalize = true;
+        } else {
+            name.push(if capitalize {
+                character.to_ascii_uppercase()
+            } else {
+                character
+            });
+            capitalize = false;
+        }
+    }
+    name
+}
+
+fn api_row_value(row: &tokio_postgres::Row) -> Value {
+    let fields = row
+        .columns()
+        .iter()
+        .enumerate()
+        .map(|(index, column)| {
+            (
+                api_field_name(column.name()),
+                column_value_at(row, index, column.type_().name()),
+            )
+        })
+        .collect::<Map<_, _>>();
+    Value::Object(fields)
 }
 
 pub(crate) fn row_value(row: &tokio_postgres::Row) -> Value {
@@ -890,7 +967,7 @@ async fn column_types(
     let rows = state
         .database
         .query(
-            "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='public' AND table_name=$1",
+            "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=$1",
             &[&entity.table],
         )
         .await
@@ -904,9 +981,23 @@ async fn column_types(
 pub(crate) fn json_param(value: &Value, data_type: Option<&str>) -> Result<Param, String> {
     match value {
         Value::Null => Ok(Param::Null),
-        Value::String(value) => Ok(Param::Text(value.clone())),
+        Value::String(value) => match data_type {
+            Some("date") => chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d")
+                .map(Param::Date)
+                .map_err(|error| format!("日期无效：{error}")),
+            Some("timestamp without time zone") => chrono::NaiveDateTime::parse_from_str(
+                &value.replace('T', " "),
+                "%Y-%m-%d %H:%M:%S%.f",
+            )
+            .map(Param::Timestamp)
+            .map_err(|error| format!("时间无效：{error}")),
+            _ => Ok(Param::Text(value.clone())),
+        },
         Value::Bool(value) => Ok(Param::Bool(*value)),
         Value::Number(value) => match data_type {
+            Some("double precision") => Ok(Param::Float(
+                value.as_f64().ok_or_else(|| "浮点数值无效".to_owned())?,
+            )),
             Some("smallint") => Ok(Param::I16(
                 value
                     .as_i64()

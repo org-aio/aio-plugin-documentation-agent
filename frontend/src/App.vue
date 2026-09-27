@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/layout/AdminLayout.vue'
 import StartupLoading from '@/components/StartupLoading.vue'
@@ -47,37 +48,43 @@ watch(sessionRevision, () => {
 </script>
 
 <template>
-  <Suspense v-if="ready && routeReady && route.meta.public">
-    <RouterView />
-    <template #fallback>
-      <StartupLoading />
-    </template>
-  </Suspense>
-  <Suspense v-else-if="ready && routeReady && embedded">
-    <RouterView />
-    <template #fallback>
-      <StartupLoading />
-    </template>
-  </Suspense>
-  <AdminLayout v-else-if="ready && routeReady && hasSession()" :key="sessionRevision" />
-  <main v-else-if="routeError" class="host-session-error">
-    <ElResult icon="error" :title="t('app.pageLoadFailed')" :sub-title="routeError">
-      <template #extra>
-        <ElButton type="primary" @click="reloadPage">{{ t('app.retryLoad') }}</ElButton>
+  <ElConfigProvider :locale="zhCn">
+    <Suspense v-if="ready && routeReady && route.meta.public">
+      <RouterView />
+      <template #fallback>
+        <StartupLoading />
       </template>
-    </ElResult>
-  </main>
-  <StartupLoading v-else-if="!routeReady" />
-  <main v-else-if="ready" class="host-session-error">
-    <ElResult icon="warning" :title="t('account.hostSessionFailedTitle')" :sub-title="sessionError">
-      <template #extra>
-        <ElButton type="primary" @click="connectHost">{{ t('account.retry') }}</ElButton>
+    </Suspense>
+    <Suspense v-else-if="ready && routeReady && embedded">
+      <RouterView />
+      <template #fallback>
+        <StartupLoading />
       </template>
-    </ElResult>
-  </main>
-  <main v-else class="host-session-error" aria-live="polite">
-    <ElResult icon="info" :title="t('account.hostSessionConnecting')" />
-  </main>
+    </Suspense>
+    <AdminLayout v-else-if="ready && routeReady && hasSession()" :key="sessionRevision" />
+    <main v-else-if="routeError" class="host-session-error">
+      <ElResult icon="error" :title="t('app.pageLoadFailed')" :sub-title="routeError">
+        <template #extra>
+          <ElButton type="primary" @click="reloadPage">{{ t('app.retryLoad') }}</ElButton>
+        </template>
+      </ElResult>
+    </main>
+    <StartupLoading v-else-if="!routeReady" />
+    <main v-else-if="ready" class="host-session-error">
+      <ElResult
+        icon="warning"
+        :title="t('account.hostSessionFailedTitle')"
+        :sub-title="sessionError"
+      >
+        <template #extra>
+          <ElButton type="primary" @click="connectHost">{{ t('account.retry') }}</ElButton>
+        </template>
+      </ElResult>
+    </main>
+    <main v-else class="host-session-error" aria-live="polite">
+      <ElResult icon="info" :title="t('account.hostSessionConnecting')" />
+    </main>
+  </ElConfigProvider>
 </template>
 
 <style scoped>

@@ -4,6 +4,9 @@ import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import ElementPlus from 'unplugin-element-plus/vite'
 import UnoCSS from 'unocss/vite'
 import { presetWind3 } from 'unocss'
 import appConfig from './app.config.json'
@@ -12,7 +15,10 @@ const aioPageInputs = Object.fromEntries(
   readdirSync(fileURLToPath(new URL('./pages', import.meta.url)))
     .filter((name) => name.endsWith('.html'))
     .sort()
-    .map((name) => [`pages/${name.slice(0, -'.html'.length)}`, fileURLToPath(new URL(`./pages/${name}`, import.meta.url))])
+    .map((name) => [
+      `pages/${name.slice(0, -'.html'.length)}`,
+      fileURLToPath(new URL(`./pages/${name}`, import.meta.url))
+    ])
 )
 
 export default defineConfig(({ mode }) => {
@@ -39,8 +45,14 @@ export default defineConfig(({ mode }) => {
           'vue-router',
           { '@/hooks/web/useMessage': ['useMessage'], '@/hooks/web/useI18n': ['useI18n'] }
         ],
+        resolvers: [ElementPlusResolver()],
         dts: false
       }),
+      Components({
+        resolvers: [ElementPlusResolver()],
+        dts: false
+      }),
+      ElementPlus({}),
       UnoCSS({ presets: [presetWind3()] })
     ],
     resolve: {

@@ -46,3 +46,10 @@ export const generateBoxunRawMaterialLedgerRecords = (ids: EntityId[]) =>
     url: '/boxun/raw-material-ledger/generate-various-raw-material-records',
     data: { ids }
   })
+
+/** 去委托原材料（原 toEntrustRawMaterials）。 */
+export const entrustBoxunRawMaterialLedger = (ids: EntityId[], projectId: string) =>
+  request.post<number>({
+    url: '/boxun/raw-material-ledger/to-entrust-raw-materials',
+    data: { ids: ids.map((id) => String(id)), type: '1', projectId }
+  })

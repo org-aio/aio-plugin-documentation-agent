@@ -1,15 +1,55 @@
 [
   { "id": "menu-5", "label": "首页", "route": "/home", "menu_path": [] },
   { "id": "menu-20", "label": "历史天气", "route": "/boxun/historical-weather", "menu_path": [] },
-  { "id": "menu-21", "label": "样品配置", "route": "/boxun/delegation-order-context", "menu_path": [] },
+  {
+    "id": "menu-21",
+    "label": "样品配置",
+    "route": "/boxun/delegation-order-context",
+    "menu_path": []
+  },
   { "id": "menu-22", "label": "我的项目", "route": "/boxun/project-info", "menu_path": [] },
-  { "id": "menu-24", "label": "商混台账", "route": "/boxun/commercial-concrete-ledger", "menu_path": ["原始数据"] },
-  { "id": "menu-25", "label": "原材料进场台账", "route": "/boxun/raw-material-ledger", "menu_path": ["原始数据"] },
-  { "id": "menu-27", "label": "见证记录", "route": "/boxun/witness-record", "menu_path": ["生成数据"] },
-  { "id": "menu-28", "label": "旁站记录", "route": "/boxun/bystander-record", "menu_path": ["生成数据"] },
-  { "id": "menu-29", "label": "混凝土施工记录", "route": "/boxun/concrete-construction-record", "menu_path": ["生成数据"] },
-  { "id": "menu-30", "label": "试块留置台账", "route": "/boxun/block-retention-ledger", "menu_path": ["生成数据"] },
-  { "id": "menu-38", "label": "试块评定", "route": "/boxun/specimen-evaluation", "menu_path": ["生成数据"] },
+  {
+    "id": "menu-24",
+    "label": "商混台账",
+    "route": "/boxun/commercial-concrete-ledger",
+    "menu_path": ["原始数据"]
+  },
+  {
+    "id": "menu-25",
+    "label": "原材料进场台账",
+    "route": "/boxun/raw-material-ledger",
+    "menu_path": ["原始数据"]
+  },
+  {
+    "id": "menu-27",
+    "label": "见证记录",
+    "route": "/boxun/witness-record",
+    "menu_path": ["生成数据"]
+  },
+  {
+    "id": "menu-28",
+    "label": "旁站记录",
+    "route": "/boxun/bystander-record",
+    "menu_path": ["生成数据"]
+  },
+  {
+    "id": "menu-29",
+    "label": "混凝土施工记录",
+    "route": "/boxun/concrete-construction-record",
+    "menu_path": ["生成数据"]
+  },
+  {
+    "id": "menu-30",
+    "label": "试块留置台账",
+    "route": "/boxun/block-retention-ledger",
+    "menu_path": ["生成数据"]
+  },
+  {
+    "id": "menu-38",
+    "label": "试块评定",
+    "route": "/boxun/specimen-evaluation",
+    "menu_path": ["生成数据"]
+  },
   { "id": "menu-31", "label": "委托单管理", "route": "/boxun/commission-order", "menu_path": [] },
   { "id": "menu-32", "label": "我的模板", "route": "/boxun/template-management", "menu_path": [] },
   { "id": "menu-40", "label": "支付设置", "route": "/boxun/payment-settings", "menu_path": [] }

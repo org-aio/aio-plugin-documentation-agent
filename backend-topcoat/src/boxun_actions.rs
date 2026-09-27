@@ -2,9 +2,39 @@ use std::collections::BTreeMap;
 
 use crate::auth::Authenticated;
 use crate::{AppState, api};
-use chrono::Datelike;
+use chrono::{Datelike, NaiveDate};
 use pinyin::ToPinyin;
 use serde_json::{Value, json};
+
+const RAW_MATERIAL_MOCK_ROWS: usize = 15;
+
+struct RawMaterialEntrustRequest {
+    ids: Vec<i64>,
+    project_id: Option<String>,
+}
+
+struct RawMaterialRecord {
+    id: i64,
+    sample_id: Option<String>,
+    entry_date: Option<NaiveDate>,
+    strength_grade: Option<String>,
+    concat_position: Option<String>,
+    furnace_batch_number: Option<String>,
+    manufacturer: Option<String>,
+    representative_batch: Option<String>,
+}
+
+struct RawMaterialMockRow {
+    sample_id: String,
+    entry_date: NaiveDate,
+    strength_grade: String,
+    manufacturer: &'static str,
+    furnace_batch_number: String,
+    building_no: &'static str,
+    concat_position: &'static str,
+    representative_batch: &'static str,
+    batch_number: String,
+}
 
 pub(crate) async fn handle(
     state: &AppState,
@@ -64,36 +94,40 @@ pub(crate) async fn handle(
         ("raw-material-ledger", "GET", "raw-material-pull-down") => {
             raw_material_pull_down(state).await
         }
-        ("raw-material-ledger", "POST", "data-generation") => raw_material_data(state, query).await,
+        ("raw-material-ledger", "POST" | "GET", "data-generation") => {
+            raw_material_data(state, query, &body).await
+        }
         ("raw-material-ledger", "POST", "generate-various-raw-material-records") => {
             generate_raw_material_witness_records(state, user, body).await
         }
         ("commercial-concrete-ledger", "POST", "add-batch") => {
             add_commercial_ledgers(state, body).await
         }
-        ("commercial-concrete-ledger", "GET", "specimen-group-numbers") => {
-            specimen_group_numbers(query)
-        }
+        (
+            "commercial-concrete-ledger" | "block-retention-ledger",
+            "GET",
+            "specimen-group-numbers",
+        ) => specimen_group_numbers(query),
         ("commercial-concrete-ledger", "POST", "generate-various-records") => {
-            generate_commercial_records(state, body).await
+            generate_commercial_records(state, body, CommercialRecordKind::All).await
         }
         (
             "commercial-concrete-ledger",
             "POST",
             "batch-generation-of-concrete-construction-records",
-        ) => generate_all_commercial(state, "concrete").await,
+        ) => generate_all_commercial(state, CommercialRecordKind::Concrete).await,
         ("commercial-concrete-ledger", "POST", "delete-various-records") => {
             delete_commercial_related(state, body).await
         }
         ("commercial-concrete-ledger", "POST", "manually-generate-various-records") => {
-            generate_commercial_records(state, body).await
+            generate_commercial_records(state, body, CommercialRecordKind::All).await
         }
         ("commercial-concrete-ledger", "POST", "mock-sh") => mock_commercial(state, query).await,
         ("commercial-concrete-ledger", "POST", "generate-test-block-retention-account") => {
-            generate_all_commercial(state, "block").await
+            generate_all_commercial(state, CommercialRecordKind::Block).await
         }
         ("commercial-concrete-ledger", "POST", "generate-side-station-records") => {
-            generate_all_commercial(state, "bystander").await
+            generate_all_commercial(state, CommercialRecordKind::Bystander).await
         }
         ("commercial-concrete-ledger", "POST", "delete-by-project-id") => {
             delete_commercial_by_project(state, query).await
@@ -305,7 +339,18 @@ async fn mock_commercial(
     Ok(json!(created))
 }
 
-async fn generate_all_commercial(state: &AppState, kind: &str) -> Result<Value, String> {
+#[derive(Clone, Copy, PartialEq)]
+enum CommercialRecordKind {
+    All,
+    Block,
+    Concrete,
+    Bystander,
+}
+
+async fn generate_all_commercial(
+    state: &AppState,
+    kind: CommercialRecordKind,
+) -> Result<Value, String> {
     let ids = state
         .database
         .query(
@@ -320,12 +365,12 @@ async fn generate_all_commercial(state: &AppState, kind: &str) -> Result<Value, 
     if ids.is_empty() {
         return Ok(json!(0));
     }
-    let generated = generate_commercial_records(state, json!({"ids": ids})).await?;
+    let generated = generate_commercial_records(state, json!({"ids": ids}), kind).await?;
     Ok(generated
         .get(match kind {
-            "block" => "blockRetentionLedgerCount",
-            "concrete" => "concreteRecordCount",
-            _ => "bystanderRecordCount",
+            CommercialRecordKind::Block => "blockRetentionLedgerCount",
+            CommercialRecordKind::Concrete => "concreteRecordCount",
+            CommercialRecordKind::Bystander | CommercialRecordKind::All => "bystanderRecordCount",
         })
         .cloned()
         .unwrap_or_else(|| json!(0)))
@@ -998,25 +1043,30 @@ async fn entrust_blocks(
         .await
         .map_err(db_error)?;
     let mut created = 0;
-    let mut group_keys = std::collections::BTreeSet::new();
+    let mut group_orders = BTreeMap::new();
     for row in rows {
         let building = row
             .get::<_, Option<String>>("building_no")
             .unwrap_or_default();
         let date = row.get::<_, Option<chrono::NaiveDate>>("production_date");
-        let key = format!(
-            "{building}|{}",
-            date.map(|value| value.to_string()).unwrap_or_default()
+        // 同组只创建一张委托单，但每条台账的样品都必须保留；项目之间不能合并。
+        let key = (
+            row.get::<_, Option<String>>("project_id"),
+            building.clone(),
+            date,
         );
-        if !group_keys.insert(key) {
-            continue;
-        }
-        created += 1;
-        let order_id = next_id(state, "boxun_wtsj_commission_order").await?;
-        state.database.execute(
+        let order_id = if let Some(order_id) = group_orders.get(&key) {
+            *order_id
+        } else {
+            created += 1;
+            let order_id = next_id(state, "boxun_wtsj_commission_order").await?;
+            state.database.execute(
             "INSERT INTO boxun_wtsj_commission_order (create_time,id,project_id,fk_sk_id,project_name_with_lou,commission_date,material_name,inspection_basis,sy_bs) VALUES (CURRENT_TIMESTAMP,$1,$2,$3,$4,$5,$6,$7,'待送检')",
-            &[&order_id, &row.get::<_, Option<String>>("project_id"), &row.get::<_, Option<String>>("fk_sh_id"), &building, &date, &row.get::<_, Option<String>>("strength_grade"), &row.get::<_, Option<String>>("impermeability_level")],
+            &[&order_id, &row.get::<_, Option<String>>("project_id"), &row.get::<_, i64>("id").to_string(), &building, &date, &row.get::<_, Option<String>>("strength_grade"), &row.get::<_, Option<String>>("impermeability_level")],
         ).await.map_err(db_error)?;
+            group_orders.insert(key, order_id);
+            order_id
+        };
         let counts = match block_type {
             Some(1) => vec![(
                 1,
@@ -1073,31 +1123,153 @@ async fn entrust_blocks(
 }
 
 async fn entrust_raw_materials(state: &AppState, body: Value) -> Result<Value, String> {
-    let ids = body
-        .as_array()
-        .map(|values| values.iter().filter_map(value_as_i64).collect::<Vec<_>>())
-        .unwrap_or_default();
-    if ids.is_empty() {
-        return Err("请选择台账".into());
-    }
+    let request = parse_raw_material_entrust_request(&body)?;
     let rows = state
         .database
         .query(
             "SELECT * FROM boxun_mobilization_of_raw_materials WHERE id=ANY($1)",
-            &[&ids],
+            &[&request.ids],
         )
         .await
         .map_err(db_error)?;
+    if rows.len() != request.ids.len() {
+        return Err("部分原材料台账不存在或已被删除".to_owned());
+    }
+    let project_ids = rows
+        .iter()
+        .map(|row| row.get::<_, Option<String>>("project_id"))
+        .collect::<Vec<_>>();
+    let project_id = validate_raw_material_project(&project_ids, request.project_id.as_deref())?;
+    let records = rows
+        .iter()
+        .map(raw_material_record)
+        .collect::<Result<Vec<_>, _>>()?;
+    let groups = raw_material_groups(&records)?;
     let mut created = 0;
-    for row in rows {
+    for group in groups {
+        let sample_id = group
+            .first()
+            .and_then(|row| row.sample_id.clone())
+            .ok_or_else(|| "原材料缺少样品".to_owned())?;
+        let raw_material_ids = group
+            .iter()
+            .map(|row| row.id.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
         let order_id = next_id(state, "boxun_wtsj_commission_order").await?;
         state.database.execute(
-            "INSERT INTO boxun_wtsj_commission_order (create_time,id,project_id,commission_date,material_name,sy_bs) VALUES (CURRENT_TIMESTAMP,$1,$2,$3,$4,'待送检')",
-            &[&order_id, &row.get::<_, Option<String>>("project_id"), &row.get::<_, Option<chrono::NaiveDate>>("entrustment_date"), &row.get::<_, Option<String>>("strength_grade")],
+            "INSERT INTO boxun_wtsj_commission_order (create_time,id,project_id,commission_date,sample_id,sample_type,fk_ycl_id,sy_bs) VALUES (CURRENT_TIMESTAMP,$1,$2,CURRENT_DATE,$3,$4,$5,'已取样')",
+            &[
+                &order_id,
+                &project_id,
+                &sample_id,
+                &sample_id.parse::<i32>().ok(),
+                &raw_material_ids,
+            ],
         ).await.map_err(db_error)?;
+        for row in group {
+            let sample_pk = next_id(state, "boxun_wtsj_commission_order_sample").await?;
+            state.database.execute(
+                "INSERT INTO boxun_wtsj_commission_order_sample (create_time,id,fk_wt_id,strength_grade,engineering_location,forming_date,furnace_batch_number,manufacturer,sample_quantity,representative_batch,sample_status) VALUES (CURRENT_TIMESTAMP,$1,$2,$3,$4,$5,$6,$7,'1组',$8,'□正常□异常')",
+                &[
+                    &sample_pk,
+                    &order_id.to_string(),
+                    &row.strength_grade,
+                    &row.concat_position,
+                    &row.entry_date,
+                    &row.furnace_batch_number,
+                    &row.manufacturer,
+                    &row.representative_batch,
+                ],
+            ).await.map_err(db_error)?;
+        }
         created += 1;
     }
     Ok(json!(created))
+}
+
+fn parse_raw_material_entrust_request(body: &Value) -> Result<RawMaterialEntrustRequest, String> {
+    let (ids, project_id) = match body {
+        Value::Array(values) => (values.clone(), None),
+        Value::Object(values) => (
+            values
+                .get("ids")
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default(),
+            values
+                .get("projectId")
+                .and_then(Value::as_str)
+                .map(str::to_owned),
+        ),
+        _ => return Err("请选择台账".to_owned()),
+    };
+    let ids = ids
+        .into_iter()
+        .map(|value| value_as_i64(&value).ok_or_else(|| "原材料台账 id 无效".to_owned()))
+        .collect::<Result<Vec<_>, _>>()?;
+    if ids.is_empty() {
+        return Err("请选择台账".to_owned());
+    }
+    if ids
+        .iter()
+        .copied()
+        .collect::<std::collections::BTreeSet<_>>()
+        .len()
+        != ids.len()
+    {
+        return Err("原材料台账不能重复选择".to_owned());
+    }
+    Ok(RawMaterialEntrustRequest { ids, project_id })
+}
+
+fn validate_raw_material_project(
+    project_ids: &[Option<String>],
+    requested_project_id: Option<&str>,
+) -> Result<String, String> {
+    let project_id = project_ids
+        .first()
+        .and_then(Clone::clone)
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| "原材料缺少项目".to_owned())?;
+    if project_ids
+        .iter()
+        .any(|value| value.as_deref() != Some(project_id.as_str()))
+    {
+        return Err("所选原材料必须属于同一个项目".to_owned());
+    }
+    if requested_project_id.is_some_and(|value| value != project_id) {
+        return Err("所选原材料不属于当前项目".to_owned());
+    }
+    Ok(project_id)
+}
+
+fn raw_material_record(row: &tokio_postgres::Row) -> Result<RawMaterialRecord, String> {
+    Ok(RawMaterialRecord {
+        id: row.get("id"),
+        sample_id: row.get("sample_id"),
+        entry_date: row.get("entry_date"),
+        strength_grade: row.get("strength_grade"),
+        concat_position: row.get("concat_position"),
+        furnace_batch_number: row.get("furnace_batch_number"),
+        manufacturer: row.get("manufacturer"),
+        representative_batch: row.get("representative_batch"),
+    })
+}
+
+fn raw_material_groups(rows: &[RawMaterialRecord]) -> Result<Vec<Vec<&RawMaterialRecord>>, String> {
+    let mut grouped = BTreeMap::<(Option<NaiveDate>, String), Vec<&RawMaterialRecord>>::new();
+    for row in rows {
+        let sample_id = row
+            .sample_id
+            .clone()
+            .ok_or_else(|| "原材料缺少样品".to_owned())?;
+        grouped
+            .entry((row.entry_date, sample_id))
+            .or_default()
+            .push(row);
+    }
+    Ok(grouped.into_values().collect())
 }
 
 async fn add_raw_materials(
@@ -1314,23 +1486,74 @@ fn witness_number(test_piece_number: &str, witness_count: i64) -> String {
 async fn raw_material_data(
     state: &AppState,
     query: &BTreeMap<String, Vec<String>>,
+    body: &Value,
 ) -> Result<Value, String> {
     let project_id = query
         .get("projectId")
         .and_then(|values| values.first())
         .cloned()
+        .or_else(|| body.get("projectId").and_then(value_as_string))
         .unwrap_or_default();
-    let rows = state
+    if project_id.trim().is_empty() {
+        return Err("请选择项目".to_owned());
+    }
+    let sample_ids = state
         .database
         .query(
-            "SELECT * FROM boxun_mobilization_of_raw_materials WHERE project_id=$1 ORDER BY id DESC LIMIT 1000",
-            &[&project_id],
+            "SELECT id FROM boxun_delegation_order_context WHERE material_name NOT LIKE '%试块%' AND material_name NOT LIKE '%直螺纹连接%' AND material_name NOT LIKE '%电渣压力焊%' ORDER BY sort_no NULLS LAST,id",
+            &[],
         )
         .await
-        .map_err(db_error)?;
-    Ok(Value::Array(
-        rows.iter().map(crate::crud::row_value).collect(),
-    ))
+        .map_err(db_error)?
+        .into_iter()
+        .map(|row| row.get::<_, i64>("id").to_string())
+        .collect::<Vec<_>>();
+    if sample_ids.is_empty() {
+        return Err("请先配置原材料样品".to_owned());
+    }
+    let mut created = Vec::with_capacity(RAW_MATERIAL_MOCK_ROWS);
+    for mock in raw_material_mock_rows(&sample_ids, chrono::Local::now().date_naive()) {
+        let id = next_id(state, "boxun_mobilization_of_raw_materials").await?;
+        state.database.execute(
+            "INSERT INTO boxun_mobilization_of_raw_materials (create_time,id,project_id,sample_id,entrustment_date,entry_date,strength_grade,manufacturer,furnace_batch_number,building_no,concat_position,representative_batch,number_of_pieces,batch_number,remarks,test_number,testing_conclusion,sampling_and_inspection_status,sy_bs) VALUES (CURRENT_TIMESTAMP,$1,$2,$3,CURRENT_DATE,CURRENT_DATE,$4,$5,$6,$7,$8,$9,'1件',$10,$10,$10,'合格','1','已取样')",
+            &[&id, &project_id, &mock.sample_id, &mock.strength_grade, &mock.manufacturer, &mock.furnace_batch_number, &mock.building_no, &mock.concat_position, &mock.representative_batch, &mock.batch_number],
+        ).await.map_err(db_error)?;
+        created.push(json!({
+            "id": id,
+            "projectId": project_id,
+            "sampleId": mock.sample_id,
+            "entryDate": mock.entry_date.to_string(),
+            "strengthGrade": mock.strength_grade,
+            "manufacturer": mock.manufacturer,
+            "buildingNo": mock.building_no,
+            "concatPosition": mock.concat_position,
+            "representativeBatch": mock.representative_batch,
+            "numberOfPieces": "1件",
+            "batchNumber": mock.batch_number,
+            "syBs": "已取样",
+        }));
+    }
+    Ok(Value::Array(created))
+}
+
+fn raw_material_mock_rows(sample_ids: &[String], entry_date: NaiveDate) -> Vec<RawMaterialMockRow> {
+    const BUILDING_NUMBERS: [&str; 4] = ["1#", "2#", "3#", "4#"];
+    const POSITIONS: [&str; 4] = ["筏板", "防水保护层", "墙柱连梁", "梁板梯"];
+    const REPRESENTATIVE_BATCHES: [&str; 4] = ["1T", "2T", "3T", "4T"];
+
+    (0..RAW_MATERIAL_MOCK_ROWS)
+        .map(|index| RawMaterialMockRow {
+            sample_id: sample_ids[index % sample_ids.len()].clone(),
+            entry_date,
+            strength_grade: format!("C{}", 30 + index % 16),
+            manufacturer: "博勋",
+            furnace_batch_number: format!("L{:03}", index + 1),
+            building_no: BUILDING_NUMBERS[index % BUILDING_NUMBERS.len()],
+            concat_position: POSITIONS[index % POSITIONS.len()],
+            representative_batch: REPRESENTATIVE_BATCHES[index % REPRESENTATIVE_BATCHES.len()],
+            batch_number: format!("P{:03}", index + 1),
+        })
+        .collect()
 }
 
 async fn add_commercial_ledgers(state: &AppState, body: Value) -> Result<Value, String> {
@@ -1363,32 +1586,46 @@ fn specimen_group_numbers(query: &BTreeMap<String, Vec<String>>) -> Result<Value
         .unwrap_or_default();
     let impermeability = query
         .get("impermeabilityLevel")
+        .or_else(|| query.get("ksGrade"))
         .and_then(|values| values.first())
         .map(String::as_str)
         .unwrap_or_default();
     let volume = query
         .get("volumeSum")
         .and_then(|values| values.first())
-        .and_then(|value| value.parse::<f64>().ok())
+        .map(|value| {
+            value
+                .parse::<f64>()
+                .map_err(|_| "浇筑方量必须是有效数字".to_owned())
+        })
+        .transpose()?
         .unwrap_or(0.0);
-    let floor_groups = |value: f64| -> i32 { (value / 100.0).ceil() as i32 };
-    let standard = if is_standard_position(&position) {
-        floor_groups(volume).max(1)
+    if !volume.is_finite() || volume < 0.0 || volume > f64::from(i32::MAX) * 100.0 {
+        return Err("浇筑方量必须是有效的非负数，且不能超出组数计算范围".into());
+    }
+    // 沿用 Boxun 的阶梯方量规则；垫层固定三组标养。
+    let standard = if position.contains("垫层") {
+        3
+    } else if volume < 1000.0 {
+        (volume / 100.0).ceil() as i32
     } else {
-        0
+        10 + ((volume - 1000.0) / 200.0).ceil() as i32
     };
-    let impermeable = if !impermeability.is_empty() || grade.to_ascii_uppercase().contains('P') {
-        floor_groups(volume).max(1)
+    let impermeable =
+        if !impermeability.trim().is_empty() || grade.to_ascii_uppercase().contains('P') {
+            (volume / 500.0).ceil() as i32
+        } else {
+            0
+        };
+    let excluded = ["垫层", "防水保护层", "止水圈", "反坎", "带", "散水"];
+    let same_culture = if excluded.iter().any(|keyword| position.contains(keyword)) {
+        0
+    } else if position.contains("筏板") {
+        3
     } else {
-        0
-    };
-    let same_culture = if position.contains("底板") || position.contains("基础") {
         1
-    } else {
-        0
     };
-    let demolding = if position.contains("梁") || position.contains("板") || position.contains("柱")
-    {
+    let demolding = if position.contains("梁") || position.contains("板") {
         1
     } else {
         0
@@ -1401,11 +1638,11 @@ fn specimen_group_numbers(query: &BTreeMap<String, Vec<String>>) -> Result<Value
     }))
 }
 
-fn is_standard_position(position: &str) -> bool {
-    !position.is_empty()
-}
-
-async fn generate_commercial_records(state: &AppState, body: Value) -> Result<Value, String> {
+async fn generate_commercial_records(
+    state: &AppState,
+    body: Value,
+    kind: CommercialRecordKind,
+) -> Result<Value, String> {
     let ids = body
         .get("ids")
         .and_then(Value::as_array)
@@ -1426,7 +1663,7 @@ async fn generate_commercial_records(state: &AppState, body: Value) -> Result<Va
         )
         .await
         .map_err(db_error)?;
-    let mut groups = BTreeMap::<String, CommercialGroup>::new();
+    let mut groups = BTreeMap::new();
     for row in rows {
         let building = row
             .get::<_, Option<String>>("building_no")
@@ -1434,19 +1671,23 @@ async fn generate_commercial_records(state: &AppState, body: Value) -> Result<Va
         let position = row
             .get::<_, Option<String>>("concat_position")
             .unwrap_or_default();
-        let key = format!("{building}|{position}");
+        let project_id = row
+            .get::<_, Option<String>>("fk_project_id")
+            .or_else(|| row.get::<_, Option<String>>("project_id"));
+        let key = (project_id.clone(), building.clone(), position.clone());
         let group = groups.entry(key).or_insert_with(|| CommercialGroup {
-            source_id: row
-                .get::<_, Option<String>>("id")
-                .map(|value| value.to_string()),
-            project_id: row.get::<_, Option<String>>("project_id"),
-            production_date: row.get::<_, Option<chrono::NaiveDate>>("production_date"),
+            source_id: row.get::<_, i64>("id").to_string(),
+            project_id,
+            production_date: row
+                .get::<_, Option<chrono::NaiveDate>>("production_date")
+                .unwrap_or_else(|| chrono::Local::now().date_naive()),
             building_no: building,
             position,
             strength_grade: row.get::<_, Option<String>>("strength_grade"),
             impermeability_level: row.get::<_, Option<String>>("impermeability_level"),
-            manufacturer: row.get::<_, Option<String>>("manufacturer"),
-            construction_unit: None,
+            mixing_station: row
+                .get::<_, Option<String>>("name_of_commercial_mixing_station")
+                .or_else(|| row.get::<_, Option<String>>("manufacturer")),
             volume: 0.0,
         });
         group.volume += row.get::<_, Option<f64>>("sum_volume").unwrap_or(0.0);
@@ -1474,24 +1715,39 @@ async fn generate_commercial_records(state: &AppState, body: Value) -> Result<Va
         let impermeable = json_i32(&counts, "numberOfSetsOfImpermeableTestPieces");
         let same = json_i32(&counts, "numberOfSpecimensInTheSameCulture");
         let demolding = json_i32(&counts, "numberOfDemoldingSpecimenGroups");
-        let block_id = next_id(state, "boxun_wtsj_block_retention_ledger").await?;
-        state.database.execute(
+        if matches!(
+            kind,
+            CommercialRecordKind::All | CommercialRecordKind::Block
+        ) {
+            let block_id = next_id(state, "boxun_wtsj_block_retention_ledger").await?;
+            state.database.execute(
             "INSERT INTO boxun_wtsj_block_retention_ledger (create_time,id,fk_sh_id,project_id,production_date,building_no,concat_position,strength_grade,impermeability_level,sum_volume,number_of_standard_curing_specimen_groups,number_of_sets_of_impermeable_test_pieces,number_of_specimens_in_the_same_culture,number_of_demolding_specimen_groups) VALUES (CURRENT_TIMESTAMP,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)",
             &[&block_id, &group.source_id, &group.project_id, &group.production_date, &group.building_no, &group.position, &group.strength_grade, &group.impermeability_level, &group.volume, &standard, &impermeable, &same, &demolding],
         ).await.map_err(db_error)?;
-        block_count += 1;
-        let bystander_id = next_id(state, "boxun_bystander_record").await?;
-        state.database.execute(
-            "INSERT INTO boxun_bystander_record (create_time,id,fk_sh_id,construction_unit,pouring_location,strength_grade,sum_volume,number_of_standard_curing_specimen_groups,number_of_specimens_in_the_same_culture,number_of_demolding_specimen_groups,number_of_sets_of_impermeable_test_pieces,date_of_bystander) VALUES (CURRENT_TIMESTAMP,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
-            &[&bystander_id, &group.source_id, &group.construction_unit, &group.position, &group.strength_grade, &group.volume, &standard, &same, &demolding, &impermeable, &group.production_date],
+            block_count += 1;
+        }
+        if matches!(
+            kind,
+            CommercialRecordKind::All | CommercialRecordKind::Bystander
+        ) {
+            let bystander_id = next_id(state, "boxun_bystander_record").await?;
+            state.database.execute(
+            "INSERT INTO boxun_bystander_record (create_time,id,fk_sh_id,project_id,pouring_location,strength_grade,sum_volume,number_of_standard_curing_specimen_groups,number_of_specimens_in_the_same_culture,number_of_demolding_specimen_groups,number_of_sets_of_impermeable_test_pieces,date_of_bystander,key_parts_of_bystanders,name_of_commercial_mixing_station) VALUES (CURRENT_TIMESTAMP,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$4,$12)",
+            &[&bystander_id, &group.source_id, &group.project_id, &group.position, &group.strength_grade, &group.volume, &standard, &same, &demolding, &impermeable, &group.production_date, &group.mixing_station],
         ).await.map_err(db_error)?;
-        bystander_count += 1;
-        let concrete_id = next_id(state, "boxun_wtsj_concrete_construction_record").await?;
-        state.database.execute(
+            bystander_count += 1;
+        }
+        if matches!(
+            kind,
+            CommercialRecordKind::All | CommercialRecordKind::Concrete
+        ) {
+            let concrete_id = next_id(state, "boxun_wtsj_concrete_construction_record").await?;
+            state.database.execute(
             "INSERT INTO boxun_wtsj_concrete_construction_record (create_time,id,fk_sh_id,project_id,production_date,building_no,concat_position,pouring_position,sum_volume,name_of_commercial_mixing_station,number_of_standard_curing_specimen_groups,number_of_specimens_in_the_same_culture,number_of_demolding_specimen_groups,number_of_sets_of_impermeable_test_pieces) VALUES (CURRENT_TIMESTAMP,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)",
-            &[&concrete_id, &group.source_id, &group.project_id, &group.production_date, &group.building_no, &group.position, &group.position, &group.volume, &group.manufacturer, &standard, &same, &demolding, &impermeable],
+            &[&concrete_id, &group.source_id, &group.project_id, &group.production_date, &group.building_no, &group.position, &group.position, &group.volume, &group.mixing_station, &standard, &same, &demolding, &impermeable],
         ).await.map_err(db_error)?;
-        concrete_count += 1;
+            concrete_count += 1;
+        }
     }
     Ok(json!({
         "blockRetentionLedgerCount": block_count,
@@ -1501,15 +1757,14 @@ async fn generate_commercial_records(state: &AppState, body: Value) -> Result<Va
 }
 
 struct CommercialGroup {
-    source_id: Option<String>,
+    source_id: String,
     project_id: Option<String>,
-    production_date: Option<chrono::NaiveDate>,
+    production_date: chrono::NaiveDate,
     building_no: String,
     position: String,
     strength_grade: Option<String>,
     impermeability_level: Option<String>,
-    manufacturer: Option<String>,
-    construction_unit: Option<String>,
+    mixing_station: Option<String>,
     volume: f64,
 }
 
@@ -1897,7 +2152,71 @@ fn db_error(error: tokio_postgres::Error) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{pinyin_first_letters, witness_number};
+    use super::{
+        RAW_MATERIAL_MOCK_ROWS, RawMaterialRecord, parse_raw_material_entrust_request,
+        pinyin_first_letters, raw_material_groups, raw_material_mock_rows, specimen_group_numbers,
+        validate_raw_material_project, witness_number,
+    };
+    use chrono::NaiveDate;
+    use serde_json::json;
+
+    #[test]
+    fn specimen_counts_follow_boxun_volume_and_position_rules() -> Result<(), String> {
+        // 期望值来自 BoxunSpecimenGroupCalculatorImpl，覆盖阶梯边界和特殊部位。
+        let cases = [
+            ("垫层", "C15", "", 50.0, [3, 0, 0, 0]),
+            ("筏板", "C30", "P6", 1200.0, [11, 3, 3, 1]),
+            ("梁板", "C30P6", "", 501.0, [6, 2, 1, 1]),
+            ("柱", "C30", "", 1000.0, [10, 0, 1, 0]),
+            ("墙", "C30", "", 1001.0, [11, 0, 1, 0]),
+            ("墙", "C30", "", 1201.0, [12, 0, 1, 0]),
+            ("防水保护层", "C20", "", 100.0, [1, 0, 0, 0]),
+            ("止水圈", "C20", "", 0.0, [0, 0, 0, 0]),
+            ("后浇带", "C30", "", 101.0, [2, 0, 0, 0]),
+        ];
+        for (position, grade, impermeability, volume, expected) in cases {
+            let query = [
+                ("pouringPosition".into(), vec![position.into()]),
+                ("strengthGrade".into(), vec![grade.into()]),
+                ("impermeabilityLevel".into(), vec![impermeability.into()]),
+                ("volumeSum".into(), vec![volume.to_string()]),
+            ]
+            .into_iter()
+            .collect();
+            let result = specimen_group_numbers(&query)?;
+            assert_eq!(
+                result,
+                json!({
+                    "numberOfStandardCuringSpecimenGroups": expected[0],
+                    "numberOfSetsOfImpermeableTestPieces": expected[1],
+                    "numberOfSpecimensInTheSameCulture": expected[2],
+                    "numberOfDemoldingSpecimenGroups": expected[3],
+                }),
+                "{position} / {volume}"
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn specimen_counts_accept_legacy_impermeability_and_reject_invalid_volumes()
+    -> Result<(), String> {
+        let mut query = [
+            ("ksGrade".into(), vec!["P6".into()]),
+            ("volumeSum".into(), vec!["501".into()]),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            specimen_group_numbers(&query)?["numberOfSetsOfImpermeableTestPieces"],
+            2
+        );
+        for invalid in ["-1", "NaN", "inf", "abc", "1e100"] {
+            query.insert("volumeSum".into(), vec![invalid.into()]);
+            assert!(specimen_group_numbers(&query).is_err(), "{invalid}");
+        }
+        Ok(())
+    }
 
     #[test]
     fn creates_raw_material_test_piece_number_like_hutool() {
@@ -1908,5 +2227,100 @@ mod tests {
     #[test]
     fn creates_raw_material_witness_number_with_separator() {
         assert_eq!(witness_number("GJ", 12), "GJ_12");
+    }
+
+    #[test]
+    fn creates_fifteen_raw_materials_like_legacy_generator() {
+        let rows = raw_material_mock_rows(
+            &["10".to_owned(), "20".to_owned()],
+            NaiveDate::from_ymd_opt(2026, 9, 26).unwrap(),
+        );
+        assert_eq!(rows.len(), RAW_MATERIAL_MOCK_ROWS);
+        assert_eq!(rows[0].sample_id, "10");
+        assert_eq!(rows[0].strength_grade, "C30");
+        assert_eq!(rows[0].furnace_batch_number, "L001");
+        assert_eq!(rows[0].building_no, "1#");
+        assert_eq!(rows[0].concat_position, "筏板");
+        assert_eq!(rows[0].representative_batch, "1T");
+        assert_eq!(rows[14].sample_id, "10");
+        assert_eq!(rows[14].strength_grade, "C44");
+        assert_eq!(rows[14].furnace_batch_number, "L015");
+        assert_eq!(rows[14].batch_number, "P015");
+    }
+
+    #[test]
+    fn parses_current_array_and_legacy_object_requests() {
+        let current = parse_raw_material_entrust_request(&json!(["1", 2])).unwrap();
+        assert_eq!(current.ids, vec![1, 2]);
+        assert_eq!(current.project_id, None);
+
+        let legacy = parse_raw_material_entrust_request(&json!({
+            "ids": ["3", "4"],
+            "type": "1",
+            "projectId": "project-a"
+        }))
+        .unwrap();
+        assert_eq!(legacy.ids, vec![3, 4]);
+        assert_eq!(legacy.project_id.as_deref(), Some("project-a"));
+    }
+
+    #[test]
+    fn rejects_invalid_or_duplicate_raw_material_ids() {
+        assert!(parse_raw_material_entrust_request(&json!(["1", "invalid"])).is_err());
+        assert!(parse_raw_material_entrust_request(&json!(["1", 1])).is_err());
+    }
+
+    #[test]
+    fn validates_that_raw_materials_belong_to_one_project() {
+        let project_ids = [Some("project-a".to_owned()), Some("project-a".to_owned())];
+        assert_eq!(
+            validate_raw_material_project(&project_ids, Some("project-a")).unwrap(),
+            "project-a"
+        );
+        assert!(validate_raw_material_project(&project_ids, Some("project-b")).is_err());
+
+        let mixed_projects = [Some("project-a".to_owned()), Some("project-b".to_owned())];
+        assert!(validate_raw_material_project(&mixed_projects, None).is_err());
+    }
+
+    #[test]
+    fn groups_raw_materials_by_entry_date_and_sample_id() {
+        let records = vec![
+            raw_material_record_for_test(1, "10", "2026-09-26"),
+            raw_material_record_for_test(2, "10", "2026-09-26"),
+            raw_material_record_for_test(3, "20", "2026-09-26"),
+            raw_material_record_for_test(4, "10", "2026-09-27"),
+        ];
+        let groups = raw_material_groups(&records).unwrap();
+        assert_eq!(groups.len(), 3);
+        assert_eq!(
+            groups[0].iter().map(|row| row.id).collect::<Vec<_>>(),
+            vec![1, 2]
+        );
+        assert_eq!(
+            groups[1].iter().map(|row| row.id).collect::<Vec<_>>(),
+            vec![3]
+        );
+        assert_eq!(
+            groups[2].iter().map(|row| row.id).collect::<Vec<_>>(),
+            vec![4]
+        );
+    }
+
+    fn raw_material_record_for_test(
+        id: i64,
+        sample_id: &str,
+        entry_date: &str,
+    ) -> RawMaterialRecord {
+        RawMaterialRecord {
+            id,
+            sample_id: Some(sample_id.to_owned()),
+            entry_date: Some(entry_date.parse().unwrap()),
+            strength_grade: Some("C30".to_owned()),
+            concat_position: Some("筏板".to_owned()),
+            furnace_batch_number: Some("L001".to_owned()),
+            manufacturer: Some("博勋".to_owned()),
+            representative_batch: Some("1T".to_owned()),
+        }
     }
 }
